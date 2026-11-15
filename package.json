@@ -1,5 +1,5 @@
 {
-  "name": "@kx7m2qd/vigil",
+  "name": "hagstone",
   "version": "0.1.0",
   "description": "Local-first application security scanner: SAST, SCA and secrets with one finding model.",
   "keywords": [
@@ -15,16 +15,16 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kx7m2qd/vigil.git"
+    "url": "git+https://github.com/kx7m2qd/hagstone.git"
   },
-  "homepage": "https://github.com/kx7m2qd/vigil#readme",
+  "homepage": "https://github.com/kx7m2qd/hagstone#readme",
   "bugs": {
-    "url": "https://github.com/kx7m2qd/vigil/issues"
+    "url": "https://github.com/kx7m2qd/hagstone/issues"
   },
   "type": "module",
   "license": "UNLICENSED",
   "bin": {
-    "vigil": "dist/cli.js"
+    "hagstone": "dist/cli.js"
   },
   "files": [
     "dist",

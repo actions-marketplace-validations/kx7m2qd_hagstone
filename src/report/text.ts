@@ -48,7 +48,7 @@ export function toText(result: ScanResult, opts: { color: boolean }): string {
   lines.push(
     c(DIM, result.engines.map((e) => `${e.engine} ${e.ok ? `${e.findings} in ${e.ms}ms` : "FAILED"}`).join(" · ")),
   );
-  if (result.ignores.length) lines.push(c(DIM, `excluded by .vigilignore: ${safe(result.ignores.join(", ")).slice(0, 300)}`));
+  if (result.ignores.length) lines.push(c(DIM, `excluded by .hagstoneignore: ${safe(result.ignores.join(", ")).slice(0, 300)}`));
   for (const w of result.warnings) lines.push(c(COLOR.medium, `warning: ${safe(w)}`));
   return lines.join("\n");
 }

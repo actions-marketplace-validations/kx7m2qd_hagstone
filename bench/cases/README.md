@@ -1,6 +1,6 @@
 # Benchmark cases
 
-Small, realistic apps that are **intentionally vulnerable**. Excluded from `vigil scan` via `.vigilignore`.
+Small, realistic apps that are **intentionally vulnerable**. Excluded from `hagstone scan` via `.hagstoneignore`.
 
 Label every real vulnerability with a comment on the line directly above it:
 
@@ -21,7 +21,7 @@ they show where recall is lost. Include the realistic safe fix next to each bug.
 ## OWASP Benchmark for Python (`npm run bench:owasp`)
 
 `bench/owasp.ts` downloads [OWASP BenchmarkPython](https://github.com/OWASP-Benchmark/BenchmarkPython)
-at a pinned commit, checks its SHA-256 and caches it under the Vigil cache directory. It is GPL-3.0,
+at a pinned commit, checks its SHA-256 and caches it under the Hagstone cache directory. It is GPL-3.0,
 so it is never copied into this repo. Each test file is scored per category the OWASP way:
 **score = true-positive rate − false-positive rate** (0 = no better than guessing).
 
@@ -36,7 +36,7 @@ in this folder and by real CVE fixes.
 For each one it pins the vulnerable file (the fix commit's parent), the fixed file, their SHA-256s,
 and the line the fix changed. `bench/cves.ts` downloads both files from the upstream repo, verifies
 them, scans them, and checks the case's rule fires on the vulnerable line and **not** on the fixed one.
-The files keep their projects' licenses, so they are cached under the Vigil cache directory, never
+The files keep their projects' licenses, so they are cached under the Hagstone cache directory, never
 copied here. `bench/cve-thresholds.json` gates detection recall and the number of fixes still flagged.
 
 To add a case, pick an advisory with exactly one fix commit, record the sink line before and the

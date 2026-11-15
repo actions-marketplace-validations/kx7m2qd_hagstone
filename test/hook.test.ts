@@ -20,7 +20,7 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
 
 const dirs: string[] = [];
 async function tempRepo(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "vigil-hook-test-"));
+  const dir = await mkdtemp(join(tmpdir(), "hagstone-hook-test-"));
   dirs.push(dir);
   await git(dir, "init", "-q");
   return dir;
@@ -148,7 +148,7 @@ describe("hookScript", () => {
   });
 
   it("survives spaces and single quotes in paths when run by sh", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "vigil-q-"));
+    const dir = await mkdtemp(join(tmpdir(), "hagstone-q-"));
     dirs.push(dir);
     const weird = join(dir, "it's a dir");
     await mkdir(weird);
@@ -166,7 +166,7 @@ describe("hookScript", () => {
 describe("install / uninstall", () => {
   const hookPath = (repo: string) => join(repo, ".git", "hooks", "pre-commit");
   // A stand-in for dist/cli.js, so these tests don't depend on `npm run build` having run.
-  const fakeCli = join(tmpdir(), `vigil-fake-cli-${process.pid}.js`);
+  const fakeCli = join(tmpdir(), `hagstone-fake-cli-${process.pid}.js`);
   beforeAll(() => writeFile(fakeCli, ""));
   afterAll(() => rm(fakeCli, { force: true }));
   const install = (o: { cwd: string; force?: boolean }) => installHook({ ...o, cli: fakeCli });
@@ -190,7 +190,7 @@ describe("install / uninstall", () => {
 
     expect((await install({ cwd: repo, force: true })).code).toBe(0);
     expect(await readFile(hookPath(repo), "utf8")).toContain(HOOK_MARKER);
-    expect(await readFile(hookPath(repo) + ".vigil-backup", "utf8")).toContain("echo mine");
+    expect(await readFile(hookPath(repo) + ".hagstone-backup", "utf8")).toContain("echo mine");
   });
 
   it("uninstall restores the backup, leaves foreign hooks, and tolerates no hook", async () => {
@@ -204,7 +204,15 @@ describe("install / uninstall", () => {
     await install({ cwd: repo, force: true });
     expect((await uninstall({ cwd: repo })).code).toBe(0);
     expect(await readFile(hookPath(repo), "utf8")).toContain("echo mine");
-    await expect(stat(hookPath(repo) + ".vigil-backup")).rejects.toThrow();
+    await expect(stat(hookPath(repo) + ".hagstone-backup")).rejects.toThrow();
+  });
+
+  it("uninstalls a hook installed as vigil and restores its backup", async () => {
+    const repo = await tempRepo();
+    await writeFile(hookPath(repo), "#!/bin/sh\n# vigil-managed-hook\nexec node cli.js hook run\n", { mode: 0o755 });
+    await writeFile(hookPath(repo) + ".vigil-backup", "#!/bin/sh\necho mine\n", { mode: 0o755 });
+    expect((await uninstall({ cwd: repo })).code).toBe(0);
+    expect(await readFile(hookPath(repo), "utf8")).toContain("echo mine");
   });
 
   it("respects core.hooksPath", async () => {
@@ -215,7 +223,7 @@ describe("install / uninstall", () => {
   });
 
   it("fails outside a git repo", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "vigil-nogit-"));
+    const dir = await mkdtemp(join(tmpdir(), "hagstone-nogit-"));
     dirs.push(dir);
     const res = await install({ cwd: dir });
     expect(res.code).toBe(2);
@@ -241,7 +249,7 @@ describe("hook run (end to end)", () => {
     await git(repo, "add", "app.js");
     const res = await hookRun({ ...opts, cwd: repo });
     expect(res.code).toBe(1);
-    expect(res.output).toContain("Commit blocked by vigil");
+    expect(res.output).toContain("Commit blocked by hagstone");
     expect(res.output).not.toContain("ZQXWVTRPLMNKJHGF");
   }, 60_000);
 

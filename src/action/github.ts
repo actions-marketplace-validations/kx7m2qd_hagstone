@@ -1,4 +1,4 @@
-// PR review comments + check run for the GitHub Action, built from Vigil's SARIF report.
+// PR review comments + check run for the GitHub Action, built from Hagstone's SARIF report.
 // Spec: docs/specs/pr-feedback.md. Only Finding data (via SARIF) is sent; no source is read.
 import { SEVERITY_ORDER, severityAtLeast, type Severity } from "../core/finding.js";
 import { TOOL_NAME } from "../version.js";
@@ -19,7 +19,7 @@ export interface ReportItem {
 export const MAX_COMMENTS = 25;
 export const MAX_ANNOTATIONS = 500;
 const ANNOTATION_BATCH = 50;
-const MARKER = /<!-- vigil:([A-Za-z0-9_.:]+) -->/;
+const MARKER = /<!-- hagstone:([A-Za-z0-9_.:]+) -->/;
 /** Fingerprint as it appears in a comment marker (no "-" so it can never close the comment). */
 const markerId = (id: string) => id.replace(/[^A-Za-z0-9_.:]/g, "");
 
@@ -99,7 +99,7 @@ export function commentBody(f: ReportItem): string {
     safeText(f.message),
   ];
   if (f.reachability) lines.push("", `Reachability: ${safeText(f.reachability, 40)}`);
-  lines.push("", `<!-- vigil:${markerId(f.id)} -->`);
+  lines.push("", `<!-- hagstone:${markerId(f.id)} -->`);
   return lines.join("\n");
 }
 
@@ -142,7 +142,7 @@ export function checkOutput(items: ReportItem[], exitCode: number): { conclusion
   const counts = SEVERITY_ORDER.map((s) => `${items.filter((f) => f.severity === s).length} ${s}`).join(", ");
   if (exitCode === 0) return { conclusion: "success", title: `${items.length} finding${items.length === 1 ? "" : "s"}, none at or above fail-on`, summary: counts };
   if (exitCode === 1) return { conclusion: "failure", title: "Findings at or above fail-on", summary: counts };
-  return { conclusion: "failure", title: "Scan error", summary: `Vigil could not complete the scan (exit ${exitCode}). See the Scan step log.` };
+  return { conclusion: "failure", title: "Scan error", summary: `Hagstone could not complete the scan (exit ${exitCode}). See the Scan step log.` };
 }
 
 // ---- GitHub API -------------------------------------------------------------------------------
@@ -199,7 +199,7 @@ export async function postCheckRun(ctx: Ctx, headSha: string, items: ReportItem[
   const first = anns.slice(0, ANNOTATION_BATCH);
   const output = { title: out.title, summary: out.summary };
   const run = await gh(ctx, "POST", "/check-runs", {
-    name: "Vigil",
+    name: "Hagstone",
     head_sha: headSha,
     status: "completed",
     conclusion: out.conclusion,
@@ -229,7 +229,7 @@ export async function postReview(
 
   const { comments, skipped } = selectComments(items, added, done, minSeverity);
   if (comments.length === 0) return { posted: 0, skipped };
-  const more = skipped ? `\n\n${skipped} more new finding${skipped === 1 ? "" : "s"} on changed lines: see the Vigil check run.` : "";
+  const more = skipped ? `\n\n${skipped} more new finding${skipped === 1 ? "" : "s"} on changed lines: see the Hagstone check run.` : "";
   await gh(ctx, "POST", `/pulls/${pr.number}/reviews`, {
     commit_id: pr.headSha,
     event: "COMMENT",
@@ -257,15 +257,15 @@ export async function report(o: ReportOptions): Promise<void> {
   const headSha: string = pr?.head?.sha ?? o.sha;
   const permHint = (what: string, perm: string, e: unknown) => {
     if (e instanceof GitHubError && (e.status === 403 || e.status === 404)) {
-      o.log(`::notice::Vigil skipped the ${what}: the token lacks \`${perm}\` (fork pull requests never have it).`);
+      o.log(`::notice::Hagstone skipped the ${what}: the token lacks \`${perm}\` (fork pull requests never have it).`);
     } else {
-      o.log(`::warning::Vigil could not post the ${what}: ${e instanceof Error ? e.message : String(e)}`);
+      o.log(`::warning::Hagstone could not post the ${what}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
   if (o.checkRun) {
     try {
       await postCheckRun(o.ctx, headSha, o.items, o.exitCode);
-      o.log(`Vigil: check run posted (${Math.min(o.items.length, MAX_ANNOTATIONS)} annotations).`);
+      o.log(`Hagstone: check run posted (${Math.min(o.items.length, MAX_ANNOTATIONS)} annotations).`);
     } catch (e) {
       permHint("check run", "checks: write", e);
     }
@@ -273,7 +273,7 @@ export async function report(o: ReportOptions): Promise<void> {
   if (o.prComments && pr?.number) {
     try {
       const r = await postReview(o.ctx, { number: pr.number, headSha }, o.items, o.minSeverity);
-      o.log(`Vigil: ${r.posted} new review comment${r.posted === 1 ? "" : "s"}${r.skipped ? ` (${r.skipped} over the cap)` : ""}.`);
+      o.log(`Hagstone: ${r.posted} new review comment${r.posted === 1 ? "" : "s"}${r.skipped ? ` (${r.skipped} over the cap)` : ""}.`);
     } catch (e) {
       permHint("pull request comments", "pull-requests: write", e);
     }

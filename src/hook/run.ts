@@ -41,9 +41,9 @@ export function shouldBlock(findings: Finding[], failOn: Severity | "none"): boo
 
 const SKIP_MODES = new Set(["160000", "120000"]);
 
-/** Write staged blobs (and the staged .vigilignore) into dest. Returns how many staged files were written. */
+/** Write staged blobs (and the staged .hagstoneignore) into dest. Returns how many staged files were written. */
 async function materialize(root: string, dest: string, paths: string[]): Promise<number> {
-  const wanted = [...new Set([...paths, ".vigilignore"])];
+  const wanted = [...new Set([...paths, ".hagstoneignore", ".vigilignore"])];
   const entries = await indexEntries(root, wanted);
   let written = 0;
   for (const rel of wanted) {
@@ -69,7 +69,7 @@ export async function hookRun(opts: {
   const staged = await stagedFiles(root);
   if (staged.length === 0) return { code: 0, output: "" };
 
-  const tmp = await mkdtemp(join(tmpdir(), "vigil-hook-")); // mode 0700
+  const tmp = await mkdtemp(join(tmpdir(), "hagstone-hook-")); // mode 0700
   try {
     const dest = resolve(tmp);
     if ((await materialize(root, dest, staged)) === 0) return { code: 0, output: "" };
@@ -81,7 +81,7 @@ export async function hookRun(opts: {
     if (failed) {
       return {
         code: 2,
-        output: `vigil: ${failed.engine} unavailable. Run \`vigil engines install\`, or bypass once with \`git commit --no-verify\`.\n`,
+        output: `hagstone: ${failed.engine} unavailable. Run \`hagstone engines install\`, or bypass once with \`git commit --no-verify\`.\n`,
       };
     }
 
@@ -90,9 +90,9 @@ export async function hookRun(opts: {
     const block = shouldBlock(kept, opts.failOn);
     const lines: string[] = [];
     if (kept.length > 0) lines.push(toText({ ...result, findings: kept }, { color: opts.color }));
-    if (hidden > 0) lines.push(`${hidden} existing findings in changed files not shown; run \`vigil scan\``);
+    if (hidden > 0) lines.push(`${hidden} existing findings in changed files not shown; run \`hagstone scan\``);
     if (block) {
-      lines.push("Commit blocked by vigil. Fix the findings, or bypass once with `git commit --no-verify`.");
+      lines.push("Commit blocked by hagstone. Fix the findings, or bypass once with `git commit --no-verify`.");
     }
     return { code: block ? 1 : 0, output: lines.length ? lines.join("\n") + "\n" : "" };
   } finally {

@@ -385,8 +385,8 @@ function npmEco(p: Project, file: string): Eco {
     norm: (n) => n,
     noGraph:
       file === "pnpm-lock.yaml"
-        ? "Vigil can't read pnpm-lock.yaml's dependency graph yet"
-        : `Vigil couldn't read a dependency graph from ${file}`,
+        ? "Hagstone can't read pnpm-lock.yaml's dependency graph yet"
+        : `Hagstone couldn't read a dependency graph from ${file}`,
   };
 }
 
@@ -446,7 +446,7 @@ function pypiEco(p: Project, file: string): Eco {
     norm: normalizePypi,
     noGraph: REQUIREMENTS.test(file)
       ? `${file} doesn't record which packages depend on which (pip-compile, uv or Poetry lockfiles do)`
-      : `Vigil couldn't read a dependency graph from ${file}`,
+      : `Hagstone couldn't read a dependency graph from ${file}`,
   };
 }
 
@@ -511,11 +511,11 @@ function verdict(p: Project, eco: Eco, g: DepGraph | undefined, rawName: string,
 
   if (!g) {
     if (eco.declared?.dev.has(name) && !eco.declared.prod.has(name))
-      return { status: "unknown", reason: `${rawName} is a dev dependency with no import found; dev tools are often run through CLIs or config Vigil can't fully trace.` };
-    return { status: "unknown", reason: `No import of ${rawName} found, but ${eco.noGraph}, so Vigil can't tell whether a package the project uses depends on it.` };
+      return { status: "unknown", reason: `${rawName} is a dev dependency with no import found; dev tools are often run through CLIs or config Hagstone can't fully trace.` };
+    return { status: "unknown", reason: `No import of ${rawName} found, but ${eco.noGraph}, so Hagstone can't tell whether a package the project uses depends on it.` };
   }
   const start = keysFor(g, name, version);
-  if (!start.length) return { status: "unknown", reason: `${rawName} isn't in the lockfile's dependency graph, so Vigil can't trace what pulls it in.` };
+  if (!start.length) return { status: "unknown", reason: `${rawName} isn't in the lockfile's dependency graph, so Hagstone can't trace what pulls it in.` };
 
   const w = walkUp(g, start, eco);
   if (w.live) {
@@ -528,9 +528,9 @@ function verdict(p: Project, eco: Eco, g: DepGraph | undefined, rawName: string,
     };
   }
   if (w.devRoots.length)
-    return { status: "unknown", reason: `${rawName} is pulled in by dev dependency ${list(w.devRoots)}; dev tools are often run through CLIs or config Vigil can't fully trace.` };
+    return { status: "unknown", reason: `${rawName} is pulled in by dev dependency ${list(w.devRoots)}; dev tools are often run through CLIs or config Hagstone can't fully trace.` };
   if (w.orphan || !w.prodRoots.length)
-    return { status: "unknown", reason: `Vigil couldn't trace every package that pulls in ${rawName} back to the project's own dependencies.` };
+    return { status: "unknown", reason: `Hagstone couldn't trace every package that pulls in ${rawName} back to the project's own dependencies.` };
   for (const [loader, loads] of Object.entries(eco.loaders)) {
     if (![...w.names].some((n) => loads.includes(n))) continue;
     const lk = keysFor(g, loader);

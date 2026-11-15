@@ -1,4 +1,4 @@
-# Paths excluded from `vigil scan`. One per line: a path prefix or a directory name.
+# Paths excluded from `hagstone scan`. One per line: a path prefix or a directory name.
 # These folders are intentionally vulnerable (rule tests and benchmark cases).
 rules/
 bench/cases/

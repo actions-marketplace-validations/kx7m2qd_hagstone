@@ -1,7 +1,7 @@
 name: Release
 
-# Publishes @kx7m2qd/vigil to npm with provenance when a version tag (v1.2.3) is pushed.
-# Needs the repository secret NPM_TOKEN: a granular npm token with publish rights on @kx7m2qd/vigil.
+# Publishes hagstone to npm with provenance when a version tag (v1.2.3) is pushed.
+# Needs the repository secret NPM_TOKEN: a granular npm token with publish rights on hagstone.
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
@@ -31,8 +31,8 @@ jobs:
           grep -q "TOOL_VERSION = \"$v\"" src/version.ts || { echo "src/version.ts is not $v"; exit 1; }
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.cache/vigil/engines
-          key: vigil-engines-${{ runner.os }}-${{ hashFiles('src/engines/manifest.ts') }}
+          path: ~/.cache/hagstone/engines
+          key: hagstone-engines-${{ runner.os }}-${{ hashFiles('src/engines/manifest.ts') }}
       - run: npm ci --no-audit --no-fund --ignore-scripts
       - run: npm run dev -- engines install
       - run: npm run check

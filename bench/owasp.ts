@@ -4,7 +4,7 @@
  * bench/results/owasp-python.json. Exits 1 if a category drops below bench/owasp-thresholds.json.
  *
  * The suite is GPL-3.0, so it is not vendored: it is downloaded at a pinned commit, verified
- * by SHA-256 like our engine binaries, and cached under the Vigil cache directory.
+ * by SHA-256 like our engine binaries, and cached under the Hagstone cache directory.
  */
 import { access, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";

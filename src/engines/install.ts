@@ -7,9 +7,10 @@ import { ENGINES, currentPlatform, type Artifact, type BinaryEngine as EngineNam
 import { run } from "./run.js";
 
 export function cacheRoot(): string {
-  if (process.env.VIGIL_HOME) return process.env.VIGIL_HOME;
+  if (process.env.HAGSTONE_HOME) return process.env.HAGSTONE_HOME;
+  if (process.env.VIGIL_HOME) return process.env.VIGIL_HOME; // pre-0.2.0 name
   const xdg = process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache");
-  return join(xdg, "vigil");
+  return join(xdg, "hagstone");
 }
 
 export function enginePath(name: EngineName): string {
@@ -18,7 +19,7 @@ export function enginePath(name: EngineName): string {
 }
 
 export function overrideVar(name: EngineName): string {
-  return `VIGIL_${name.replace(/-/g, "_").toUpperCase()}_BIN`;
+  return `HAGSTONE_${name.replace(/-/g, "_").toUpperCase()}_BIN`;
 }
 
 function pinnedArtifact(name: EngineName): Artifact | undefined {
@@ -141,8 +142,8 @@ export async function resolveEngine(name: EngineName, opts: { autoInstall: boole
     const present = await isFile(enginePath(name));
     throw new Error(
       present
-        ? `${name} in the cache does not match its pinned checksum. Run \`vigil engines install\` to replace it.`
-        : `${name} is not installed. Run \`vigil engines install\`.`,
+        ? `${name} in the cache does not match its pinned checksum. Run \`hagstone engines install\` to replace it.`
+        : `${name} is not installed. Run \`hagstone engines install\`.`,
     );
   }
   return installEngine(name);

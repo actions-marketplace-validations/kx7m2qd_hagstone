@@ -22,8 +22,8 @@ jobs:
       # Re-verified against pinned SHA-256 on every run.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.cache/vigil/engines
-          key: vigil-engines-${{ runner.os }}-${{ hashFiles('src/engines/manifest.ts') }}
+          path: ~/.cache/hagstone/engines
+          key: hagstone-engines-${{ runner.os }}-${{ hashFiles('src/engines/manifest.ts') }}
       - run: npm ci --no-audit --no-fund --ignore-scripts
       - run: npm run dev -- engines install
       - run: npm run check

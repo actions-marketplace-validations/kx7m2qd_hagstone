@@ -26,7 +26,7 @@ const COUNT = 5000;
 const DATA = fileURLToPath(new URL("../data/", import.meta.url));
 
 async function download(url: string): Promise<Buffer> {
-  const res = await fetch(url, { headers: { "user-agent": "vigil-data-fetch" } });
+  const res = await fetch(url, { headers: { "user-agent": "hagstone-data-fetch" } });
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
   return Buffer.from(await res.arrayBuffer());
 }
@@ -47,7 +47,7 @@ async function npmNames(): Promise<{ names: string[]; sha256: string }> {
   if (integrity !== NPM_HIGH_IMPACT_INTEGRITY) {
     throw new Error(`npm-high-impact integrity mismatch: expected ${NPM_HIGH_IMPACT_INTEGRITY}, got ${integrity}`);
   }
-  const work = await mkdtemp(join(tmpdir(), "vigil-popular-"));
+  const work = await mkdtemp(join(tmpdir(), "hagstone-popular-"));
   try {
     const tgz = join(work, "t.tgz");
     await writeFile(tgz, bytes, { mode: 0o600 });

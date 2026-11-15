@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Markdown job summary for the GitHub Action, built from Vigil's SARIF report.
+// Markdown job summary for the GitHub Action, built from Hagstone's SARIF report.
 // Usage: node action-summary.mjs <report.sarif> <exit-code>
 import { readFileSync } from "node:fs";
 
@@ -33,7 +33,7 @@ const counts = Object.fromEntries(SEVERITY.map(([s]) => [s, 0]));
 for (const r of results) counts[severityOf(r)]++;
 
 const out = [];
-out.push("## Vigil security scan", "");
+out.push("## Hagstone security scan", "");
 const verdict = code === "0" ? "✅ Passed" : code === "1" ? "❌ Failed: findings at or above the fail-on level" : `⚠️ Scan error (exit ${code})`;
 out.push(`**${verdict}** · ${results.length} finding${results.length === 1 ? "" : "s"}`, "");
 out.push("| Critical | High | Medium | Low | Info |", "|---|---|---|---|---|");

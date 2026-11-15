@@ -21,7 +21,7 @@ export interface ScanOptions {
   reachability?: boolean;
   /** Drop findings judged unreachable instead of only lowering their severity. */
   reachableOnly?: boolean;
-  /** Ignore patterns from this file instead of `<root>/.vigilignore` (missing file → none). */
+  /** Ignore patterns from this file instead of `<root>/.hagstoneignore` (missing file → none). */
   ignoreFile?: string;
 }
 
@@ -37,7 +37,7 @@ export interface ScanResult {
   root: string;
   findings: Finding[];
   /**
-   * Patterns from the repo's own .vigilignore. Surfaced in every report: the repo
+   * Patterns from the repo's own .hagstoneignore. Surfaced in every report: the repo
    * is untrusted, and a change here can hide findings.
    */
   ignores: string[];

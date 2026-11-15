@@ -39,7 +39,7 @@ describe("toSarif", () => {
   it("carries fingerprints, severity and code flows", () => {
     const r = sarif([base]).runs[0].results[0];
     expect(r.level).toBe("error");
-    expect(r.partialFingerprints["vigil/v1"]).toBe("f1");
+    expect(r.partialFingerprints["hagstone/v1"]).toBe("f1");
     expect(r.locations[0].physicalLocation.region).toEqual({ startLine: 5, endLine: 5, startColumn: 3 });
     expect(r.codeFlows[0].threadFlows[0].locations).toHaveLength(2);
   });

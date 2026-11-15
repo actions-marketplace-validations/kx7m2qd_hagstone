@@ -31,22 +31,34 @@ describe("isIgnored", () => {
 });
 
 describe("loadIgnorePatterns", () => {
-  it("reads .vigilignore, skipping comments and blanks", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "vigil-ignore-"));
-    await writeFile(join(dir, ".vigilignore"), "# comment\n\nrules/\n  fixtures  \n");
+  it("reads .hagstoneignore, skipping comments and blanks", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hagstone-ignore-"));
+    await writeFile(join(dir, ".hagstoneignore"), "# comment\n\nrules/\n  fixtures  \n");
     const patterns = await loadIgnorePatterns(dir);
     expect(patterns).toEqual([...DEFAULT_IGNORES, "rules/", "fixtures"]);
   });
 
   it("falls back to defaults without a file", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "vigil-ignore-"));
+    const dir = await mkdtemp(join(tmpdir(), "hagstone-ignore-"));
     expect(await loadIgnorePatterns(dir)).toEqual(DEFAULT_IGNORES);
   });
 
-  it("the repo's own .vigilignore excludes the intentionally vulnerable folders", async () => {
+  it("the repo's own .hagstoneignore excludes the intentionally vulnerable folders", async () => {
     const patterns = await loadIgnorePatterns(process.cwd());
     for (const p of ["rules/x.js", "bench/cases/x.js", "test/fixtures/x.js"]) {
       expect(isIgnored(p, patterns)).toBe(true);
     }
+  });
+});
+
+describe("legacy ignore file", () => {
+  it("reads .vigilignore only when .hagstoneignore is absent", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hagstone-ignore-"));
+    await writeFile(join(dir, ".vigilignore"), "old/\n");
+    expect(await loadIgnorePatterns(dir)).toContain("old/");
+    await writeFile(join(dir, ".hagstoneignore"), "new/\n");
+    const both = await loadIgnorePatterns(dir);
+    expect(both).toContain("new/");
+    expect(both).not.toContain("old/");
   });
 });

@@ -1,11 +1,11 @@
-# Vigil GitHub Action
+# Hagstone GitHub Action
 
-Runs Vigil on every push and pull request, inside your own GitHub runner. Source code never leaves
+Runs Hagstone on every push and pull request, inside your own GitHub runner. Source code never leaves
 the runner; only the SARIF report is uploaded, to your repo's own code scanning.
 
 ```yaml
-# .github/workflows/vigil.yml
-name: Vigil
+# .github/workflows/hagstone.yml
+name: Hagstone
 on:
   push:
     branches: [main]
@@ -19,7 +19,7 @@ jobs:
       security-events: write   # for the code scanning upload
     steps:
       - uses: actions/checkout@v7
-      - uses: kx7m2qd/vigil@v0
+      - uses: kx7m2qd/hagstone@v0
         with:
           fail-on: high
 ```
@@ -38,15 +38,15 @@ scanning** (annotated on changed lines in the PR), and a findings table in the r
 | `offline` | `false` | Skip npm/PyPI registry lookups (package names only are ever sent) |
 | `engines` | all | Comma-separated subset: `opengrep,osv-scanner,gitleaks,pkgrisk` |
 | `upload-sarif` | `true` | Upload to code scanning. Private repos need GitHub Advanced Security. |
-| `sarif-file` | `vigil.sarif` | Where the report is written (also an output, for later steps) |
+| `sarif-file` | `hagstone.sarif` | Where the report is written (also an output, for later steps) |
 
 Outputs: `exit-code` (0 clean, 1 findings at/above `fail-on`, 2 scan error) and `sarif-file`.
 
 ## Notes
 - Linux x64 runners only for now (the pinned engine binaries are linux-x64 and darwin-arm64).
 - Engine binaries are cached between runs and re-checked against their pinned SHA-256 every run.
-- Paths in `.vigilignore` at the scan root are skipped. On pull requests the **base branch's**
-  `.vigilignore` is used, so a PR can't exclude the code it adds; a PR that edits it gets a warning,
+- Paths in `.hagstoneignore` at the scan root are skipped. On pull requests the **base branch's**
+  `.hagstoneignore` is used, so a PR can't exclude the code it adds; a PR that edits it gets a warning,
   and the change applies after merge.
 - `@v0` follows the latest 0.x release. For a fixed, auditable version, pin a full commit SHA
-  (`kx7m2qd/vigil@<sha> # v0.1.0`). Avoid `@main`: it changes with every push.
+  (`kx7m2qd/hagstone@<sha> # v0.1.0`). Avoid `@main`: it changes with every push.

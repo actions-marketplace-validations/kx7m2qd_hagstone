@@ -1,4 +1,4 @@
-# Vigil — notes for Claude Code
+# Hagstone — notes for Claude Code
 
 Read `docs/APPROACH.md` before planning any feature. It defines the principles, roadmap and loops.
 
@@ -21,7 +21,7 @@ Read `docs/APPROACH.md` before planning any feature. It defines the principles, 
 - Rules need `metadata.cwe`, `metadata.owasp`, `metadata.confidence`, and a `message` that says
   what is wrong, why it matters, and how to fix it.
 - `rules/` test files and `bench/cases/` are intentionally vulnerable. They are excluded via
-  `.vigilignore`; keep it that way.
+  `.hagstoneignore`; keep it that way.
 - Source code never leaves the user's machine. Only `Finding` objects may be sent anywhere.
 - ESM + TypeScript, NodeNext resolution: relative imports end in `.js`.
 - Prefer Node built-ins over new dependencies.

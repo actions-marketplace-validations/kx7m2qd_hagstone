@@ -12,7 +12,7 @@ import { moduleCandidates } from "../src/reachability/pypi-modules.js";
 
 const dirs: string[] = [];
 async function project(files: Record<string, string>): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "vigil-reach-"));
+  const dir = await mkdtemp(join(tmpdir(), "hagstone-reach-"));
   dirs.push(dir);
   for (const [name, body] of Object.entries(files)) {
     await mkdir(join(dir, name, ".."), { recursive: true });

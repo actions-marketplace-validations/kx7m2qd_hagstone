@@ -1,13 +1,13 @@
 # Action: PR comments + check run
 
-Goal: on a pull request, a reviewer sees Vigil's findings where they read code: inline comments on
-the lines the PR adds, and a "Vigil" check run with annotations. Push events get the check run only.
+Goal: on a pull request, a reviewer sees Hagstone's findings where they read code: inline comments on
+the lines the PR adds, and a "Hagstone" check run with annotations. Push events get the check run only.
 
 ## Inputs (action.yml)
 - `pr-comments` (default `auto`): review comments on added lines. `auto` = only when `upload-sarif` is
   off, because code scanning already comments on PR lines from the SARIF upload (seen on PR #1:
   the same finding twice).
-- `check-run` (default `true`): a completed `Vigil` check run on the PR head (or pushed) commit.
+- `check-run` (default `true`): a completed `Hagstone` check run on the PR head (or pushed) commit.
 - `comment-min-severity` (default `medium`): weaker findings go to the check run only.
 - `github-token` (default `${{ github.token }}`).
 
@@ -19,7 +19,7 @@ The severity gate stays in the Gate step; this step never changes the job result
 - Input is the SARIF the Scan step wrote (only `Finding` data; no source is read or sent).
   Paths are made repo-relative with the scan path's git prefix.
 - **Comments:** only findings whose start line is a `+` line in the PR diff (`GET pulls/{n}/files`
-  patches). Each body carries a hidden `<!-- vigil:<fingerprint> -->`; findings already commented in
+  patches). Each body carries a hidden `<!-- hagstone:<fingerprint> -->`; findings already commented in
   this PR are skipped, so re-runs don't repeat. At most 25 new comments per run, most severe first,
   posted as one review (`event: COMMENT`). Files without a patch (too large/binary) are skipped.
 - **Check run:** conclusion `success` (exit 0), `failure` (exit 1), `failure` titled "Scan error"

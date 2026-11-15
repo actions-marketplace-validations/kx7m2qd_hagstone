@@ -19,7 +19,7 @@ export interface PkgriskOptions {
   /** Test/bench hook: the clock. */
   now?: () => number;
   /**
-   * Where registry responses are cached. Absent: the Vigil cache dir (never the scanned repo).
+   * Where registry responses are cached. Absent: the Hagstone cache dir (never the scanned repo).
    * Present but `undefined`: no cache (tests and the bench must not read or write the user's cache).
    */
   cacheDir?: string;

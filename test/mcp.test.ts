@@ -20,7 +20,7 @@ afterEach(async () => {
 });
 
 async function tempDir(files: Record<string, string> = {}): Promise<string> {
-  const dir = await realpath(await mkdtemp(join(tmpdir(), "vigil-mcp-test-")));
+  const dir = await realpath(await mkdtemp(join(tmpdir(), "hagstone-mcp-test-")));
   dirs.push(dir);
   for (const [name, body] of Object.entries(files)) {
     await mkdir(dirname(join(dir, name)), { recursive: true });
@@ -37,7 +37,7 @@ async function rpc(tools: Tool[], lines: unknown[]): Promise<Array<Record<string
   const output = new PassThrough();
   let out = "";
   output.on("data", (c) => (out += String(c)));
-  const done = serve({ name: "vigil", version: "0.0.0", instructions: "hi" }, tools, { input, output });
+  const done = serve({ name: "hagstone", version: "0.0.0", instructions: "hi" }, tools, { input, output });
   for (const l of lines) input.write((typeof l === "string" ? l : JSON.stringify(l)) + "\n");
   input.end();
   await done;
@@ -95,7 +95,7 @@ describe("protocol", () => {
     );
     expect(replies).toHaveLength(4);
     const byId = new Map(replies.map((r) => [r.id, r]));
-    expect(byId.get(1)!.result).toMatchObject({ protocolVersion: "2025-03-26", serverInfo: { name: "vigil" }, instructions: "hi", capabilities: { tools: {} } });
+    expect(byId.get(1)!.result).toMatchObject({ protocolVersion: "2025-03-26", serverInfo: { name: "hagstone" }, instructions: "hi", capabilities: { tools: {} } });
     expect(byId.get(2)!.result.protocolVersion).toBe(PROTOCOL_VERSIONS[0]);
     expect(byId.get(3)!.result.tools).toEqual([{ name: "echo", description: "d", inputSchema: { type: "object" } }]);
     expect(byId.get("p")!.result).toEqual({});
@@ -151,7 +151,7 @@ describe("scan tool", () => {
   }
 
   async function repo(): Promise<string> {
-    const dir = await tempDir({ "a.js": "a", "b.js": "b", "package.json": "{}", ".vigilignore": "gen/\n", ".gitignore": "out/\n" });
+    const dir = await tempDir({ "a.js": "a", "b.js": "b", "package.json": "{}", ".hagstoneignore": "gen/\n", ".gitignore": "out/\n" });
     await git(dir, "init", "-q");
     await git(dir, "add", "-A");
     await git(dir, "commit", "-qm", "init");
@@ -169,7 +169,7 @@ describe("scan tool", () => {
     await writeFile(join(dir, "a.js"), "changed");
     await writeFile(join(dir, "new.py"), "x");
     await mkdir(join(dir, "gen"));
-    await writeFile(join(dir, "gen", "g.js"), "x"); // .vigilignore'd
+    await writeFile(join(dir, "gen", "g.js"), "x"); // .hagstoneignore'd
     await mkdir(join(dir, "out"));
     await writeFile(join(dir, "out", "o.js"), "x"); // .gitignore'd
     await writeFile(join(dir, "bin.dat"), Buffer.from([0, 1, 2]));
@@ -179,7 +179,7 @@ describe("scan tool", () => {
     expect(calls[0]!.target).not.toBe(dir);
     expect(calls[0]!.files).toEqual(["a.js", "new.py"]);
     expect(calls[0]!.opts.engines).toEqual(["opengrep", "gitleaks"]);
-    expect(calls[0]!.opts.ignoreFile).toBe(join(dir, ".vigilignore"));
+    expect(calls[0]!.opts.ignoreFile).toBe(join(dir, ".hagstoneignore"));
     await expect(readdir(calls[0]!.target)).rejects.toThrow(); // temp copy removed
 
     expect(body.scope).toBe("changed");
@@ -306,7 +306,7 @@ describe("check_package tool", () => {
   });
 });
 
-describe("vigil mcp over stdio", () => {
+describe("hagstone mcp over stdio", () => {
   it("answers initialize and tools/list from the real CLI", async () => {
     const msgs = [
       { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } },

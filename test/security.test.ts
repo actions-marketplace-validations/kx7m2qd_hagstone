@@ -1,5 +1,5 @@
 /**
- * Regression tests for Vigil's own security properties (docs/SECURITY.md).
+ * Regression tests for Hagstone's own security properties (docs/SECURITY.md).
  * If one of these fails, a hole has been reopened: do not loosen the test.
  */
 import { createHash } from "node:crypto";
@@ -127,14 +127,14 @@ describe("engine processes", () => {
 });
 
 describe("engine binaries", () => {
-  const saved = process.env.VIGIL_HOME;
+  const saved = process.env.HAGSTONE_HOME;
   afterEach(() => {
-    if (saved === undefined) delete process.env.VIGIL_HOME;
-    else process.env.VIGIL_HOME = saved;
+    if (saved === undefined) delete process.env.HAGSTONE_HOME;
+    else process.env.HAGSTONE_HOME = saved;
   });
 
   it("a tampered cached binary is reported as not installed and never resolved", async () => {
-    process.env.VIGIL_HOME = await mkdtemp(join(tmpdir(), "vigil-home-"));
+    process.env.HAGSTONE_HOME = await mkdtemp(join(tmpdir(), "hagstone-home-"));
     const path = enginePath("gitleaks");
     await mkdir(join(path, ".."), { recursive: true });
     await writeFile(path, "#!/bin/sh\necho pwned\n", { mode: 0o755 });
@@ -163,7 +163,7 @@ const enginesReady = (await Promise.all((["opengrep", "gitleaks", "osv-scanner"]
 
 describe.skipIf(!enginesReady)("hostile repo cannot suppress findings", () => {
   it("ignores nosemgrep, .semgrepignore, gitleaks:allow, .gitleaks.toml, .gitleaksignore, osv-scanner.toml", async () => {
-    const repo = await mkdtemp(join(tmpdir(), "vigil-hostile-"));
+    const repo = await mkdtemp(join(tmpdir(), "hagstone-hostile-"));
     const files: Record<string, string> = {
       "app.js": `const { exec } = require("child_process");\nmodule.exports = (req, res) => {\n  exec("ls " + req.query.dir); // nosemgrep\n};\n`,
       "token.js": `const t = "${FAKE_TOKEN}"; // gitleaks:allow\n`,
@@ -210,9 +210,9 @@ describe("engine downloads", () => {
 });
 
 describe("ignore file override (CI uses the base branch's copy)", () => {
-  it("--ignore-file replaces the repo's own .vigilignore; a missing file means no patterns", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "vigil-ign-"));
-    await writeFile(join(dir, ".vigilignore"), "src/\n");
+  it("--ignore-file replaces the repo's own .hagstoneignore; a missing file means no patterns", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hagstone-ign-"));
+    await writeFile(join(dir, ".hagstoneignore"), "src/\n");
     await writeFile(join(dir, "base.ignore"), "docs/\n");
     expect(await loadIgnorePatterns(dir)).toContain("src/");
     const base = await loadIgnorePatterns(dir, join(dir, "base.ignore"));

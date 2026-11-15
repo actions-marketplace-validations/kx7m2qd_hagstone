@@ -162,7 +162,7 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
 
   const scanTool: Tool = {
     name: "scan",
-    title: "Vigil security scan",
+    title: "Hagstone security scan",
     description:
       "Scan the project for security problems: vulnerable code patterns (injection, XSS, SSRF, unsafe deserialization, ...), " +
       "hardcoded secrets, and risky or vulnerable npm/PyPI dependencies. By default only files changed since the last commit " +
@@ -232,14 +232,14 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
         const depsChanged = selected.some((f) => MANIFEST.test(basename(f)));
         const parts: ScanResult[] = [];
 
-        const tmp = await mkdtemp(join(tmpdir(), "vigil-mcp-")); // mode 0700
+        const tmp = await mkdtemp(join(tmpdir(), "hagstone-mcp-")); // mode 0700
         try {
           const dest = await realpath(tmp);
           const { copied, skipped } = await copyFiles(root, dest, selected, ignores);
           files = copied;
           if (skipped.length) notes.push(`skipped: ${skipped.join(", ")}`);
           if (copied.length && codeEngines.length) {
-            const r = await runScan(dest, { engines: codeEngines, reachability: false, ignoreFile: join(root, ".vigilignore") });
+            const r = await runScan(dest, { engines: codeEngines, reachability: false, ignoreFile: join(root, ".hagstoneignore") });
             const fix = (s: string) => s.split(dest).join(root);
             parts.push({ ...r, warnings: r.warnings.map(fix), engines: r.engines.map((e) => (e.error ? { ...e, error: fix(e.error) } : e)) });
           }
@@ -281,7 +281,7 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
         totals: totals(result.findings),
         shown: shown.length,
         findings: shown.map(brief),
-        ...(result.ignores.length ? { vigilignore: result.ignores } : {}),
+        ...(result.ignores.length ? { hagstoneignore: result.ignores } : {}),
         ...(failed.length ? { engine_errors: failed } : {}),
         ...(result.warnings.length || notes.length ? { warnings: [...notes, ...result.warnings] } : {}),
         ...(result.findings.length > shown.length
@@ -293,7 +293,7 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
 
   const explainTool: Tool = {
     name: "explain",
-    title: "Explain a Vigil finding",
+    title: "Explain a Hagstone finding",
     description:
       "Full detail for one finding from the latest `scan`: what is wrong, why it matters and how to fix it, CWE/OWASP " +
       "references, the source-to-sink path for injection findings, reachability evidence and fixed versions for vulnerable dependencies.",
@@ -371,7 +371,7 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
 }
 
 export const INSTRUCTIONS =
-  "Vigil is a local security scanner. Call `check_package` before adding any npm or PyPI dependency. " +
+  "Hagstone is a local security scanner. Call `check_package` before adding any npm or PyPI dependency. " +
   "Call `scan` after you change code (it checks changed files by default), then `explain` for details on a finding. " +
   "Source code stays on this machine; only finding metadata is returned.";
 

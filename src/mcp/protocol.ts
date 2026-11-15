@@ -1,6 +1,6 @@
 /**
  * Minimal MCP server: JSON-RPC 2.0 over stdio, one message per line. Tools only.
- * Hand-written on purpose (no SDK): Vigil keeps zero runtime dependencies. See docs/specs/mcp-server.md.
+ * Hand-written on purpose (no SDK): Hagstone keeps zero runtime dependencies. See docs/specs/mcp-server.md.
  */
 import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";

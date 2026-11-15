@@ -1,4 +1,4 @@
-name: Vigil security scan
+name: Hagstone security scan
 description: >-
   Local-first security scan (code, dependencies, secrets) with reachability. Uploads SARIF to
   GitHub code scanning and fails the check on serious findings. Source code never leaves the runner.
@@ -31,9 +31,9 @@ inputs:
     default: "true"
   sarif-file:
     description: Where to write the SARIF report.
-    default: vigil.sarif
+    default: hagstone.sarif
   check-run:
-    description: "Post a \"Vigil\" check run with annotations. Needs `checks: write`."
+    description: "Post a \"Hagstone\" check run with annotations. Needs `checks: write`."
     default: "true"
   pr-comments:
     description: >-
@@ -64,14 +64,14 @@ runs:
       with:
         node-version: 22
 
-    - name: Build Vigil
+    - name: Build Hagstone
       shell: bash
       working-directory: ${{ github.action_path }}
       run: |
         npm ci --no-audit --no-fund --ignore-scripts
         npm run build
-        echo "VIGIL_HOME=$RUNNER_TEMP/vigil-home" >> "$GITHUB_ENV"
-        echo "engines-key=vigil-engines-$RUNNER_OS-$RUNNER_ARCH-$(sha256sum src/engines/manifest.ts | cut -c1-16)" >> "$GITHUB_OUTPUT"
+        echo "HAGSTONE_HOME=$RUNNER_TEMP/hagstone-home" >> "$GITHUB_ENV"
+        echo "engines-key=hagstone-engines-$RUNNER_OS-$RUNNER_ARCH-$(sha256sum src/engines/manifest.ts | cut -c1-16)" >> "$GITHUB_OUTPUT"
       id: build
 
     # Engine binaries are re-verified against their pinned SHA-256 on every run, so a tampered
@@ -79,7 +79,7 @@ runs:
     - name: Cache engines
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
-        path: ${{ runner.temp }}/vigil-home
+        path: ${{ runner.temp }}/hagstone-home
         key: ${{ steps.build.outputs.engines-key }}
 
     - name: Scan
@@ -98,20 +98,24 @@ runs:
       run: |
         args=(scan "$IN_PATH" --format sarif --output "$IN_SARIF" --fail-on "$IN_FAIL_ON")
 
-        # On pull requests, ignore patterns come from the base branch: the PR's own .vigilignore
+        # On pull requests, ignore patterns come from the base branch: the PR's own .hagstoneignore
         # could otherwise exclude the code it adds. If the base copy can't be read, use none.
         if [ -n "$BASE_SHA" ]; then
-          ignore_file="$RUNNER_TEMP/vigil-base.vigilignore"
+          ignore_file="$RUNNER_TEMP/hagstone-base.hagstoneignore"
           : > "$ignore_file"
           prefix=$(git -C "$IN_PATH" rev-parse --show-prefix 2>/dev/null || true)
           if git -C "$IN_PATH" cat-file -e "$BASE_SHA^{commit}" 2>/dev/null \
              || git -C "$IN_PATH" fetch --quiet --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null; then
-            git -C "$IN_PATH" show "$BASE_SHA:${prefix}.vigilignore" > "$ignore_file" 2>/dev/null || : > "$ignore_file"
+            git -C "$IN_PATH" show "$BASE_SHA:${prefix}.hagstoneignore" > "$ignore_file" 2>/dev/null \
+              || git -C "$IN_PATH" show "$BASE_SHA:${prefix}.vigilignore" > "$ignore_file" 2>/dev/null \
+              || : > "$ignore_file"
           else
-            echo "::warning::Vigil couldn't fetch the base commit, so it is scanning without any .vigilignore patterns."
+            echo "::warning::Hagstone couldn't fetch the base commit, so it is scanning without any .hagstoneignore patterns."
           fi
-          if ! cmp -s "$ignore_file" "$IN_PATH/.vigilignore" && { [ -s "$ignore_file" ] || [ -s "$IN_PATH/.vigilignore" ]; }; then
-            echo "::warning file=${prefix}.vigilignore::This pull request changes .vigilignore. Vigil used the base branch's version; the change takes effect after merge."
+          head_ignore="$IN_PATH/.hagstoneignore"
+          [ -f "$head_ignore" ] || head_ignore="$IN_PATH/.vigilignore"
+          if ! cmp -s "$ignore_file" "$head_ignore" && { [ -s "$ignore_file" ] || [ -s "$head_ignore" ]; }; then
+            echo "::warning file=${prefix}.hagstoneignore::This pull request changes .hagstoneignore. Hagstone used the base branch's version; the change takes effect after merge."
           fi
           args+=(--ignore-file "$ignore_file")
         fi
@@ -134,7 +138,7 @@ runs:
       uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
       with:
         sarif_file: ${{ inputs.sarif-file }}
-        category: vigil
+        category: hagstone
 
     # Check run + inline PR comments. Sends Finding data only; never fails the job (the Gate does).
     - name: Report to pull request
@@ -142,7 +146,7 @@ runs:
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
-        VIGIL_GITHUB_TOKEN: ${{ inputs.github-token }}
+        HAGSTONE_GITHUB_TOKEN: ${{ inputs.github-token }}
         IN_SARIF: ${{ inputs.sarif-file }}
         CODE: ${{ steps.scan.outputs.exit-code }}
         PREFIX: ${{ steps.scan.outputs.prefix }}
@@ -156,7 +160,7 @@ runs:
         fi
         node "$ACTION_PATH/dist/cli.js" action-report --sarif "$IN_SARIF" --exit-code "${CODE:-2}" --prefix "$PREFIX" \
           --check-run "$IN_CHECK_RUN" --pr-comments "$IN_PR_COMMENTS" --min-severity "$IN_MIN" \
-          || echo "::warning::Vigil could not report to the pull request."
+          || echo "::warning::Hagstone could not report to the pull request."
 
     - name: Gate
       shell: bash
@@ -164,7 +168,7 @@ runs:
         CODE: ${{ steps.scan.outputs.exit-code }}
       run: |
         case "$CODE" in
-          0) echo "Vigil: no findings at or above the fail-on level." ;;
-          1) echo "::error::Vigil found issues at or above the fail-on level. See the Security tab or the job summary."; exit 1 ;;
-          *) echo "::error::Vigil could not complete the scan (exit $CODE). See the Scan step log."; exit 2 ;;
+          0) echo "Hagstone: no findings at or above the fail-on level." ;;
+          1) echo "::error::Hagstone found issues at or above the fail-on level. See the Security tab or the job summary."; exit 1 ;;
+          *) echo "::error::Hagstone could not complete the scan (exit $CODE). See the Scan step log."; exit 2 ;;
         esac

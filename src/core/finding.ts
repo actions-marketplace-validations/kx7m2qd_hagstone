@@ -103,7 +103,7 @@ export function redactStringLiterals(code: string): string {
  * across machines.
  */
 export function secretDigest(secret: string): string {
-  return scryptSync(secret, "vigil/secret-fingerprint/v1", 32, { N: 1 << 14, r: 8, p: 1 }).toString("hex");
+  return scryptSync(secret, "hagstone/secret-fingerprint/v1", 32, { N: 1 << 14, r: 8, p: 1 }).toString("hex");
 }
 
 export function severityAtLeast(s: Severity, threshold: Severity): boolean {

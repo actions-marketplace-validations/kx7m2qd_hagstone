@@ -4,7 +4,7 @@
  * vulnerable line but not on the fixed one. Writes bench/results/cves.json; exits 1 below bench/cve-thresholds.json.
  *
  * Files are downloaded from the upstream repos at pinned commits and verified by SHA-256 (never
- * vendored: they carry their projects' own licenses), then cached under the Vigil cache directory.
+ * vendored: they carry their projects' own licenses), then cached under the Hagstone cache directory.
  */
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";

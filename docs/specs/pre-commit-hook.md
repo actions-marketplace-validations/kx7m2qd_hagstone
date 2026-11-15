@@ -1,13 +1,13 @@
-# Spec: pre-commit hook (`vigil hook`)
+# Spec: pre-commit hook (`hagstone hook`)
 
 ## Goal
 Stop secrets and high-severity code issues from being committed, fast enough (< 3 s on a typical
 commit with warm engines) that nobody reaches for `--no-verify`.
 
 ## Commands
-- `vigil hook install [--force]` writes the pre-commit hook into the repo that contains the cwd.
-- `vigil hook uninstall` removes it, but only if Vigil wrote it.
-- `vigil hook run [--fail-on <severity|none>]` is what the hook calls. You can also run it by hand.
+- `hagstone hook install [--force]` writes the pre-commit hook into the repo that contains the cwd.
+- `hagstone hook uninstall` removes it, but only if Hagstone wrote it.
+- `hagstone hook run [--fail-on <severity|none>]` is what the hook calls. You can also run it by hand.
 
 ## `hook run`: what gets scanned
 1. **Scan the index, not the working tree.** With partial staging (`git add -p`), the working tree
@@ -16,16 +16,16 @@ commit with warm engines) that nobody reaches for `--no-verify`.
    unicode in names are safe. Deleted files are skipped.
 3. Each staged path is written from `git show :<path>` (or `git cat-file blob <oid>` from
    `git ls-files -s -z`) into a fresh `mkdtemp` dir (0700). Skip submodules (mode `160000`), symlinks
-   (`120000`), and binary blobs (a NUL byte in the first 8 KB). The repo's `.vigilignore` is also
+   (`120000`), and binary blobs (a NUL byte in the first 8 KB). The repo's `.hagstoneignore` is also
    copied from the index (not the working tree) when it is present in the index.
 4. Run `scan()` on the temp dir with engines `opengrep` + `gitleaks` only. osv-scanner is skipped:
-   it is slow and needs the network. Dependency checks belong in CI (`vigil scan`). Use
+   it is slow and needs the network. Dependency checks belong in CI (`hagstone scan`). Use
    `autoInstall: false`. The hook never downloads during a commit.
 5. **Only findings on added lines count.** Parse `git diff --cached -U0 --no-color --no-ext-diff`
    hunk headers (`@@ -a,b +c,d @@`) into added line ranges per file. Keep a finding if
    `[startLine, endLine ?? startLine]` intersects an added range. Pre-existing issues in a touched
    file are not shown, so they don't block unrelated work. The count is printed as one line:
-   "N existing findings in changed files not shown; run `vigil scan`".
+   "N existing findings in changed files not shown; run `hagstone scan`".
 6. The temp dir is always removed (`finally`). Source never leaves the machine.
 
 ## Blocking
@@ -33,31 +33,31 @@ commit with warm engines) that nobody reaches for `--no-verify`.
   `--fail-on` (default `high`).
 - Exit 0 otherwise, including when nothing is staged.
 - **Engine missing or failed → exit 2 (block, fail closed)** with:
-  "vigil: <engine> unavailable. Run `vigil engines install`, or bypass once with `git commit --no-verify`."
+  "hagstone: <engine> unavailable. Run `hagstone engines install`, or bypass once with `git commit --no-verify`."
 - Output: the existing text reporter (`toText`), colored when stderr is a TTY. Output goes to
   **stderr** (git shows hook stderr). Secrets are already redacted by the normalizers.
   Never print raw blob content.
-- Footer when blocking: "Commit blocked by vigil. Fix the findings, or bypass once with
+- Footer when blocking: "Commit blocked by hagstone. Fix the findings, or bypass once with
   `git commit --no-verify`."
 
 ## `hook install`
 - Hook dir: `git rev-parse --git-path hooks`. This respects `core.hooksPath` and worktrees.
-- Script (POSIX sh, mode 0755) carrying a marker line `# vigil-managed-hook`:
+- Script (POSIX sh, mode 0755) carrying a marker line `# hagstone-managed-hook`:
   ```sh
   #!/bin/sh
-  # vigil-managed-hook
+  # hagstone-managed-hook
   exec "<absolute node path>" "<absolute path to dist/cli.js>" hook run "$@"
   ```
   The CLI path is resolved from `import.meta.url`: `dist/cli.js` when running built code, and
   `<pkg>/dist/cli.js` when running from `src/` via tsx. If that file does not exist, fail with
   "run `npm run build` first". Paths are shell-quoted (single quotes, `'` escaped).
 - An existing `pre-commit` without the marker: refuse (exit 2) and say so, unless `--force` is
-  given. `--force` renames the old hook to `pre-commit.vigil-backup` first.
-- An existing Vigil hook: overwrite it (idempotent).
+  given. `--force` renames the old hook to `pre-commit.hagstone-backup` first.
+- An existing Hagstone hook: overwrite it (idempotent).
 - Not inside a git repo: exit 2 with a clear message.
 
 ## `hook uninstall`
-- Remove `pre-commit` only if it has the marker. Restore `pre-commit.vigil-backup` if present.
+- Remove `pre-commit` only if it has the marker. Restore `pre-commit.hagstone-backup` if present.
 - No hook, or a foreign hook: print what was found and exit 0 without touching it.
 
 ## Edge cases
@@ -88,5 +88,5 @@ commit with warm engines) that nobody reaches for `--no-verify`.
   secret → exits 0. Partial staging: the secret is only in the working tree, not the index → exits 0.
 
 ## Done
-- `npm run check` and `npm run bench` pass. README/help text documents `vigil hook`.
+- `npm run check` and `npm run bench` pass. README/help text documents `hagstone hook`.
 - Measured: `hook run` wall time on a 1-file commit in this repo, recorded in the PR/commit message.

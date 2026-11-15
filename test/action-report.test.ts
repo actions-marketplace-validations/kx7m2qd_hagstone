@@ -86,7 +86,7 @@ describe("untrusted text", () => {
   });
   it("carries one marker with a sanitised fingerprint", () => {
     const body = commentBody({ ...item("ab-->c", "a.js", 1), message: "@team <b>hi</b>" });
-    expect(body).toContain("<!-- vigil:abc -->");
+    expect(body).toContain("<!-- hagstone:abc -->");
     expect(body.match(/<!--/g)).toHaveLength(1);
     expect(body).not.toContain("@team");
   });
@@ -125,14 +125,14 @@ describe("report", () => {
       "POST https://api.test/repos/o/r/check-runs": () => ({ json: { id: 99 } }),
       "PATCH https://api.test/repos/o/r/check-runs/99": () => ({}),
       "/pulls/7/files": () => ({ json: [{ filename: "a.js", status: "modified", patch: "@@ -1,1 +1,3 @@\n x\n+y\n+z" }] }),
-      "/pulls/7/comments": () => ({ json: [{ body: "old\n<!-- vigil:seen -->" }] }),
+      "/pulls/7/comments": () => ({ json: [{ body: "old\n<!-- hagstone:seen -->" }] }),
       "POST https://api.test/repos/o/r/pulls/7/reviews": () => ({}),
     });
     const log: string[] = [];
     await report({ ctx, event: prEvent, sha: "MERGE", items, exitCode: 1, checkRun: true, prComments: true, minSeverity: "medium", log: (l) => log.push(l) });
 
     const create = calls.find((c) => c.method === "POST" && c.url.endsWith("/check-runs"))!;
-    expect(create.body).toMatchObject({ name: "Vigil", head_sha: "HEAD", conclusion: "failure" });
+    expect(create.body).toMatchObject({ name: "Hagstone", head_sha: "HEAD", conclusion: "failure" });
     expect(create.body.output.annotations).toHaveLength(50);
     expect(calls.filter((c) => c.method === "PATCH")).toHaveLength(2); // 122 annotations → 50 + 50 + 22
     const review = calls.find((c) => c.url.endsWith("/reviews"))!;

@@ -28,7 +28,7 @@ npm and PyPI only.
 | npm | `package.json`, `package-lock.json` (v2/v3) | `dependencies`, `devDependencies`, `optionalDependencies` | lockfile `packages[*].version`, `hasInstallScript` |
 | PyPI | `requirements*.txt`, `pyproject.toml` (`[project] dependencies`) | each requirement line | `==` pins only, otherwise the latest release |
 
-- Every manifest found under the scan root, honouring `.vigilignore` and `DEFAULT_IGNORES`.
+- Every manifest found under the scan root, honouring `.hagstoneignore` and `DEFAULT_IGNORES`.
 - Not in v1: yarn.lock, pnpm-lock.yaml, poetry.lock, Pipfile, uv.lock. They're noted in the report
   as "not checked by pkgrisk".
 - `pyproject.toml` is read with a small parser that handles only the `dependencies = [ ... ]` array
@@ -68,11 +68,11 @@ mean `cross-env`?", "pin to a version older than 72 h", "verify the publisher be
 - What leaves the machine: **package names and versions only**, sent to `registry.npmjs.org` and
   `pypi.org/pypi/<name>/json`. osv-scanner already sends the same data to osv.dev. Source code,
   file paths and manifest contents are never sent. The README and help text say so.
-- `--offline` (on `vigil scan`) turns off every network rule. Typosquat, install-script and MAL
+- `--offline` (on `hagstone scan`) turns off every network rule. Typosquat, install-script and MAL
   checks still run.
 - Concurrency 8, 10 s timeout per request, 2 retries with backoff on 429/5xx. A User-Agent of
-  `vigil/<version>` with no personal data.
-- **Cache**: `.vigil-cache/pkgrisk/<ecosystem>/<name>.json` holding only the fields used (time map,
+  `hagstone/<version>` with no personal data.
+- **Cache**: `.hagstone-cache/pkgrisk/<ecosystem>/<name>.json` holding only the fields used (time map,
   dist-tags, version → hasInstallScript, wheel presence). TTL 24 h, and the first-publish date is
   kept forever. 404s are cached for 1 h only, so a package published later is picked up.
 - Registry unreachable: a warning (`pkgrisk: registry unreachable, N packages not checked`), not an
@@ -109,7 +109,7 @@ mean `cross-env`?", "pin to a version older than 72 h", "verify the publisher be
   (`bench` runs offline with an injected fetch), so the bench gate stays deterministic.
 
 ## False-positive check before merge
-Run `vigil scan --engines pkgrisk` on the lockfiles of this repo, Juice Shop, NodeGoat and 3 popular
+Run `hagstone scan --engines pkgrisk` on the lockfiles of this repo, Juice Shop, NodeGoat and 3 popular
 Python projects (Django, Flask, requests). The target is **zero** `pkg-typosquat` / `pkg-nonexistent`
 findings. Any hit gets fixed in the matcher or added to the allow-list, with the reason recorded.
 

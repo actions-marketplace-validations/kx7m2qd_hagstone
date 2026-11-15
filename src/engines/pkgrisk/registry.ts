@@ -2,7 +2,7 @@
  * Registry lookups (npm, PyPI) with a small on-disk cache. The `fetch` is injectable so
  * tests and the bench never touch the network.
  *
- * What is sent: a package name in the URL path and a `vigil/<version>` User-Agent. Nothing
+ * What is sent: a package name in the URL path and a `hagstone/<version>` User-Agent. Nothing
  * else (no source, no paths, no manifest content).
  */
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";

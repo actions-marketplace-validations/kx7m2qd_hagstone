@@ -1,5 +1,5 @@
-# Vigil scans itself with its own Action (`uses: ./`), so every change to action.yml is exercised.
-name: Vigil scan
+# Hagstone scans itself with its own Action (`uses: ./`), so every change to action.yml is exercised.
+name: Hagstone scan
 
 on:
   push:

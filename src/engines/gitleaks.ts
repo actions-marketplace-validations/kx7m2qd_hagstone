@@ -69,7 +69,7 @@ export async function runGitleaks(bin: string, root: string): Promise<EngineOutp
   let copy: string | undefined;
   if (ignoreFiles.length > 0) {
     warnings.push(`gitleaks: ignored the repository's ${ignoreFiles.join(", ")}; a scanned repo cannot allowlist its own secrets`);
-    copy = await mkdtemp(join(tmpdir(), "vigil-gitleaks-"));
+    copy = await mkdtemp(join(tmpdir(), "hagstone-gitleaks-"));
     const skip = new Set(ignoreFiles.map((name) => join(root, name)));
     await cp(root, copy, { recursive: true, verbatimSymlinks: true, filter: (src) => !skip.has(src) });
     cwd = copy;

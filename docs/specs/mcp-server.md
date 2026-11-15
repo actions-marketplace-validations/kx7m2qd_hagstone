@@ -1,12 +1,12 @@
-# MCP server (`vigil mcp`)
+# MCP server (`hagstone mcp`)
 
-Lets coding agents (Claude Code, Cursor, …) run Vigil on the code they just wrote, and check a
+Lets coding agents (Claude Code, Cursor, …) run Hagstone on the code they just wrote, and check a
 package before installing it.
 
 ```
-claude mcp add vigil -- npx -y @kx7m2qd/vigil mcp
+claude mcp add hagstone -- npx -y hagstone mcp
 ```
-Cursor (`.cursor/mcp.json`): `{"mcpServers": {"vigil": {"command": "npx", "args": ["-y", "@kx7m2qd/vigil", "mcp"]}}}`
+Cursor (`.cursor/mcp.json`): `{"mcpServers": {"hagstone": {"command": "npx", "args": ["-y", "hagstone", "mcp"]}}}`
 
 Releases: push a `vX.Y.Z` tag matching `package.json` and `src/version.ts`; `.github/workflows/release.yml`
 runs the gates and publishes to npm with provenance (repo secret `NPM_TOKEN`).
@@ -14,7 +14,7 @@ runs the gates and publishes to npm with provenance (repo secret `NPM_TOKEN`).
 ## Decisions (2026-11-14)
 - **Tools:** `scan`, `explain`, `check_package`. `fix` comes with the fix agent.
 - **No SDK.** Hand-written JSON-RPC 2.0 over stdio, newline-delimited, Node built-ins only
-  (`src/mcp/`). Vigil is a supply-chain tool; it keeps zero runtime dependencies. Handles
+  (`src/mcp/`). Hagstone is a supply-chain tool; it keeps zero runtime dependencies. Handles
   `initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`. Moving to the
   SDK is on the table only if we need resources, prompts or sampling.
 - **Only `Finding` data reaches the model.** No code snippets (the agent can read files itself),
@@ -28,9 +28,9 @@ runs the gates and publishes to npm with provenance (repo secret `NPM_TOKEN`).
   with totals per severity and a hint when truncated. `explain <id>` returns the full detail of one
   finding from the last scan (message, CWE/OWASP, dataflow path/lines, reachability evidence, fixed
   versions).
-- **The server is confined to its root** (`vigil mcp [path]`, default cwd). Paths outside it are
+- **The server is confined to its root** (`hagstone mcp [path]`, default cwd). Paths outside it are
   rejected.
-- **Distribution:** npm as `@kx7m2qd/vigil`, published from CI with provenance.
+- **Distribution:** npm as `hagstone`, published from CI with provenance.
 
 ## Tools
 

@@ -32,7 +32,7 @@ Usage:
                                    lower, but still fail --fail-on at their original severity.
       --trust-reachability         Let --fail-on use the lowered severity of unreachable findings
       --reachable-only             Hide unreachable findings entirely (implies --trust-reachability)
-      --ignore-file <file>         Read ignore patterns from this file instead of <path>/.vigilignore
+      --ignore-file <file>         Read ignore patterns from this file instead of <path>/.hagstoneignore
                                    (CI: pass the base branch's copy so a PR can't un-scan its own code)
 
   pkgrisk (dependency supply-chain checks) sends package names and versions, nothing else, to
@@ -44,14 +44,14 @@ Usage:
   ${TOOL_NAME} hook install [--force]  Install a git pre-commit hook. It scans staged content (the
                                     index) with opengrep + gitleaks and only reports added lines.
                                     Secrets always block; other findings block at --fail-on.
-  ${TOOL_NAME} hook uninstall       Remove the hook (only if vigil wrote it; restores a backed-up hook)
+  ${TOOL_NAME} hook uninstall       Remove the hook (only if hagstone wrote it; restores a backed-up hook)
   ${TOOL_NAME} hook run [--fail-on <severity|none>]
                                     What the hook calls (default: high). Exit 1 blocked, 2 engine
                                     missing (fail closed). Dependency checks: use \`${TOOL_NAME} scan\` in CI.
                                     Bypass once: git commit with the no-verify flag.
   ${TOOL_NAME} mcp [path]           MCP server on stdio for coding agents (tools: scan, explain,
                                   check_package). Confined to [path] (default: .). Add to Claude Code:
-                                  claude mcp add vigil -- npx -y @kx7m2qd/vigil mcp
+                                  claude mcp add hagstone -- npx -y hagstone mcp
   ${TOOL_NAME} test-rules           Run the rule test suite (rules/**)
 
 Exit codes: 0 clean · 1 findings at or above --fail-on · 2 usage or engine error
@@ -211,13 +211,13 @@ async function cmdActionReport(args: string[]): Promise<number> {
   const min = values["min-severity"] as Severity;
   if (!values.sarif) fail("action-report: --sarif is required");
   if (!SEVERITY_ORDER.includes(min)) fail(`unknown severity "${min}"`);
-  if (!env.VIGIL_GITHUB_TOKEN || !env.GITHUB_REPOSITORY) {
-    process.stdout.write("::notice::Vigil: no GitHub token or repository; skipping check run and PR comments.\n");
+  if (!env.HAGSTONE_GITHUB_TOKEN || !env.GITHUB_REPOSITORY) {
+    process.stdout.write("::notice::Hagstone: no GitHub token or repository; skipping check run and PR comments.\n");
     return 0;
   }
   const event = env.GITHUB_EVENT_PATH ? JSON.parse(await readFile(env.GITHUB_EVENT_PATH, "utf8").catch(() => "{}")) : {};
   await report({
-    ctx: { api: env.GITHUB_API_URL ?? "https://api.github.com", repo: env.GITHUB_REPOSITORY, token: env.VIGIL_GITHUB_TOKEN, fetch },
+    ctx: { api: env.GITHUB_API_URL ?? "https://api.github.com", repo: env.GITHUB_REPOSITORY, token: env.HAGSTONE_GITHUB_TOKEN, fetch },
     event,
     sha: env.GITHUB_SHA ?? "",
     items: itemsFromSarif(JSON.parse(await readFile(values.sarif, "utf8")), values.prefix),

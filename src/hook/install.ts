@@ -3,8 +3,11 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { hooksDir } from "./git.js";
 
-export const HOOK_MARKER = "# vigil-managed-hook";
-const BACKUP = "pre-commit.vigil-backup";
+export const HOOK_MARKER = "# hagstone-managed-hook";
+/** Hooks installed before the rename to Hagstone. */
+const LEGACY_MARKER = "# vigil-managed-hook";
+const ours = (script: string) => script.includes(HOOK_MARKER) || script.includes(LEGACY_MARKER);
+const BACKUP = "pre-commit.hagstone-backup";
 
 export interface HookResult {
   code: number;
@@ -57,11 +60,11 @@ export async function install(opts: { force?: boolean; cwd?: string; cli?: strin
   const target = join(dir, "pre-commit");
   const existing = await readIfExists(target);
   let note = "";
-  if (existing !== undefined && !existing.includes(HOOK_MARKER)) {
+  if (existing !== undefined && !ours(existing)) {
     if (!opts.force) {
       return {
         code: 2,
-        message: `${target} already exists and was not written by vigil. Re-run with --force to back it up to ${BACKUP}.`,
+        message: `${target} already exists and was not written by hagstone. Re-run with --force to back it up to ${BACKUP}.`,
       };
     }
     const backup = join(dir, BACKUP);
@@ -88,14 +91,16 @@ export async function uninstall(opts: { cwd?: string } = {}): Promise<HookResult
   const target = join(dir, "pre-commit");
   const existing = await readIfExists(target);
   if (existing === undefined) return { code: 0, message: `no pre-commit hook found in ${dir}` };
-  if (!existing.includes(HOOK_MARKER)) {
-    return { code: 0, message: `${target} was not written by vigil; left untouched` };
+  if (!ours(existing)) {
+    return { code: 0, message: `${target} was not written by hagstone; left untouched` };
   }
   await rm(target);
-  const backup = join(dir, BACKUP);
-  if (await exists(backup)) {
-    await rename(backup, target);
-    return { code: 0, message: `removed vigil hook and restored ${target} from ${BACKUP}` };
+  for (const name of [BACKUP, "pre-commit.vigil-backup"]) {
+    const backup = join(dir, name);
+    if (await exists(backup)) {
+      await rename(backup, target);
+      return { code: 0, message: `removed hagstone hook and restored ${target} from ${name}` };
+    }
   }
   return { code: 0, message: `removed ${target}` };
 }

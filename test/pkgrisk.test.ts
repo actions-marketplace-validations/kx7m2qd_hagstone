@@ -22,7 +22,7 @@ const hoursAgo = (h: number) => new Date(NOW - h * 3_600_000).toISOString();
 
 const dirs: string[] = [];
 async function project(files: Record<string, string>): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), "vigil-pkgrisk-"));
+  const dir = await mkdtemp(join(tmpdir(), "hagstone-pkgrisk-"));
   dirs.push(dir);
   for (const [name, body] of Object.entries(files)) {
     await mkdir(join(dir, name, ".."), { recursive: true });
@@ -257,7 +257,7 @@ describe("registry (fake fetch)", () => {
   });
 
   it("a cache hit makes no request; 404s expire after 1h, others after 24h", async () => {
-    const cacheDir = await mkdtemp(join(tmpdir(), "vigil-pkgrisk-cache-"));
+    const cacheDir = await mkdtemp(join(tmpdir(), "hagstone-pkgrisk-cache-"));
     dirs.push(cacheDir);
     let t = NOW;
     const { fetch, calls } = fakeFetch({ [url("a")]: () => json(npmDoc(daysAgo(900))) });
@@ -280,7 +280,7 @@ describe("registry (fake fetch)", () => {
   });
 
   it("keeps the earliest first-publish date across refreshes", async () => {
-    const cacheDir = await mkdtemp(join(tmpdir(), "vigil-pkgrisk-cache-"));
+    const cacheDir = await mkdtemp(join(tmpdir(), "hagstone-pkgrisk-cache-"));
     dirs.push(cacheDir);
     let t = NOW;
     let created = daysAgo(900);

@@ -164,7 +164,7 @@ export async function runOpengrep(bin: string, root: string, ignores: string[]):
     "--quiet",
     // The scanned repo is untrusted: it must not be able to silence findings with
     // inline `nosemgrep` comments or its own .semgrepignore. Suppression goes
-    // through .vigilignore only, which every report lists.
+    // through .hagstoneignore only, which every report lists.
     "--disable-nosem",
     "--x-ignore-semgrepignore-files",
     ...excludes,

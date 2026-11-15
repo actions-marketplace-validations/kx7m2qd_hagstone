@@ -1,6 +1,8 @@
-# Vigil — Build Approach
+# Hagstone — Build Approach
 
-> Working name. Rename freely; the name lives in `package.json`, `src/version.ts` and this doc.
+> Named after the hagstone: a stone with a hole worn through it that, in folklore, lets you see things
+> as they really are. Called Vigil until 0.2.0; `.vigilignore`, `VIGIL_HOME` and hooks installed as
+> vigil still work.
 
 ## 1. What we are building
 
@@ -35,7 +37,7 @@ and own the layer above them, which is where Sparrow is weakest:
 ## 3. Architecture
 
 ```
- vigil scan <path>
+ hagstone scan <path>
       │
       ├─ engines/opengrep   → our rules in rules/   ─┐
       ├─ engines/osv        → lockfiles (SCA)        ├─ normalize → Finding[] → ignore → dedupe
@@ -61,7 +63,7 @@ test/           unit tests (vitest)
 ## 4. Roadmap (solo engineer + Claude Code)
 
 ### Phase 0 — Foundation (weeks 0–4)  ✓ done
-- [x] CLI: `vigil scan` with text/json/sarif output and `--fail-on`
+- [x] CLI: `hagstone scan` with text/json/sarif output and `--fail-on`
 - [x] Engines: Opengrep, osv-scanner, Gitleaks — pinned, checksum-verified, auto-installed
 - [x] Unified `Finding` model with stable fingerprints
 - [x] First 10 rules (JS/TS + Python) with tests
@@ -74,9 +76,9 @@ test/           unit tests (vitest)
 
 ### Phase 1 — MVP (months 1–3)  ← we are here
 Done: malicious / non-existent package detection (npm + PyPI), import-level reachability for JS/Python,
-pre-commit hook (`vigil hook install`), GitHub Action (scan, SARIF upload, severity gate) — released as v0.1.0.
-MCP server (`vigil mcp`: `scan`, `explain`, `check_package`; spec `docs/specs/mcp-server.md`). Action PR
-feedback: inline comments on added lines + `Vigil` check run (spec `docs/specs/pr-feedback.md`).
+pre-commit hook (`hagstone hook install`), GitHub Action (scan, SARIF upload, severity gate) — released as v0.1.0.
+MCP server (`hagstone mcp`: `scan`, `explain`, `check_package`; spec `docs/specs/mcp-server.md`). Action PR
+feedback: inline comments on added lines + `Hagstone` check run (spec `docs/specs/pr-feedback.md`).
 
 Remaining, in this order (agreed 2026-11-14):
 1. Release 0.2.0 to npm (needs license + npm scope/`NPM_TOKEN`), then list the Action on the GitHub Marketplace.

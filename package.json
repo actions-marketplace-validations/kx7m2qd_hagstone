@@ -1,6 +1,6 @@
 {
   "name": "hagstone",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local-first application security scanner: SAST, SCA and secrets with one finding model.",
   "keywords": [
     "security",
@@ -22,7 +22,7 @@
     "url": "https://github.com/kx7m2qd/hagstone/issues"
   },
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "bin": {
     "hagstone": "dist/cli.js"
   },

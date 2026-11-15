@@ -1,0 +1,75 @@
+# Hagstone
+
+Local-first application security scanner. One command runs SAST, dependency vulnerability, secret and
+supply-chain checks, and reports everything as a single list of findings.
+
+Your source code never leaves your machine or CI runner. The supply-chain checks send package names
+and versions to npm and PyPI and nothing else, and `--offline` turns those lookups off too.
+
+- **Code:** taint-aware [Opengrep](https://github.com/opengrep/opengrep) rules for JavaScript/TypeScript
+  and Python. Every rule ships with tests and maps to a CWE and an OWASP category.
+- **Dependencies:** known vulnerabilities via [OSV-Scanner](https://github.com/google/osv-scanner),
+  with a reachability check that lowers the severity of vulnerable packages nothing imports.
+- **Secrets:** [Gitleaks](https://github.com/gitleaks/gitleaks). Secret values are redacted from every
+  report.
+- **Supply chain:** typosquats, install scripts, known-malicious packages.
+
+Engine binaries are pinned by version and SHA-256, and Hagstone checks them on every run.
+
+## Install
+
+Requires Node.js 22 or newer.
+
+```sh
+npx hagstone scan .
+# or
+npm install -g hagstone
+hagstone scan .
+```
+
+The first run downloads the pinned engines into `~/.cache/hagstone`. Prebuilt engines exist for
+Linux x64 and macOS arm64.
+
+## Usage
+
+```sh
+hagstone scan [path]                 # text report; exits 1 on findings at or above --fail-on (default: high)
+hagstone scan --format sarif --output hagstone.sarif
+hagstone hook install                # pre-commit hook: scans staged changes for code issues and secrets
+hagstone mcp                         # MCP server for coding agents (scan, explain, check_package)
+hagstone --help                      # every flag
+```
+
+Add it to Claude Code as an MCP server:
+
+```sh
+claude mcp add hagstone -- npx -y hagstone mcp
+```
+
+Skip paths with a `.hagstoneignore` file at the scan root: one entry per line, either a path prefix
+(`test/fixtures/`) or a bare name that matches at any depth (`fixtures`). `node_modules/`, `dist/`,
+`vendor/` and similar directories are always skipped.
+
+## GitHub Action
+
+```yaml
+- uses: actions/checkout@v7
+- uses: kx7m2qd/hagstone@v0
+  with:
+    fail-on: high
+```
+
+The Action gives you a pass/fail check, code scanning alerts and inline PR comments on the lines a PR
+adds. [docs/github-action.md](docs/github-action.md) has the full workflow, inputs and outputs.
+
+## Exit codes
+
+`0` clean · `1` findings at or above `--fail-on` · `2` usage or engine error
+
+## Security
+
+See [SECURITY.md](SECURITY.md) to report a vulnerability.
+
+## License
+
+[Apache-2.0](LICENSE)

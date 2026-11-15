@@ -1,7 +1,5 @@
 name: Hagstone security scan
-description: >-
-  Local-first security scan (code, dependencies, secrets) with reachability. Uploads SARIF to
-  GitHub code scanning and fails the check on serious findings. Source code never leaves the runner.
+description: Local-first security scan for code, dependencies and secrets. PR comments, code scanning, and no code leaves the runner.
 author: kx7m2qd
 branding:
   icon: shield

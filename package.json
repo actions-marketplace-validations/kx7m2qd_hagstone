@@ -1,6 +1,6 @@
 {
   "name": "hagstone",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Local-first application security scanner: SAST, SCA and secrets with one finding model.",
   "keywords": [
     "security",

@@ -90,12 +90,12 @@ describe("osv normalizer", () => {
     ],
   };
 
-  it("emits one finding per advisory group with fix versions", () => {
+  it("emits one finding per package version with fix versions", () => {
     const [f, ...rest] = normalizeOsv(ROOT, out);
     expect(rest).toHaveLength(0);
     expect(f).toMatchObject({
       category: "dependency",
-      ruleId: "GHSA-35jh-r3h4-6jhm",
+      ruleId: "vulnerable-dependency",
       severity: "high",
       location: { path: "package-lock.json", startLine: 1 },
       cwe: ["CWE-77"],

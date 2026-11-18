@@ -128,13 +128,19 @@ describe("applyReachability: npm", () => {
     expect(f.severity).toBe("high");
   });
 
-  it("reachable when its bin is used in an npm script", async () => {
+  it("dev-only when its bin is used in a build script, reachable in a start script", async () => {
     const lk = JSON.stringify({ packages: { "": { dependencies: { typescript: "1" } }, "node_modules/typescript": { version: "1.0.0", bin: { tsc: "bin/tsc" } } } });
     const f = await verdict(
       { "package.json": pkg({ typescript: "1" }, { scripts: { build: "tsc -p ." } }), "package-lock.json": lk },
       vuln("typescript", "npm", "package-lock.json"),
     );
-    expect(f.reachability?.status).toBe("reachable");
+    expect(f.reachability?.status, f.reachability?.reason).toBe("dev-only");
+    const start = await verdict(
+      { "package.json": pkg({ typescript: "1" }, { scripts: { build: "node x", start: "tsc -w" } }), "package-lock.json": lk },
+      vuln("typescript", "npm", "package-lock.json"),
+    );
+    expect(start.reachability?.status, start.reachability?.reason).toBe("reachable");
+    expect(start.reachability?.evidence).toEqual({ path: "package.json", line: 1 });
   });
 
   it("prose, cache paths and quoted words don't make an undeclared package reachable", async () => {
@@ -162,9 +168,9 @@ describe("applyReachability: npm", () => {
       const f = await verdict(files, vuln(name, "npm", "package-lock.json"));
       expect(f.reachability?.status, f.reachability?.reason).toBe("unreachable");
     }
-    // Declared directly, the same mention counts.
+    // Declared directly, the same mention counts (as CI tooling, so dev-only).
     const own = await verdict({ ...files, "package.json": pkg({ express: "1", legacy: "1", npm: "1" }), "package-lock.json": lock(["express", "legacy", "npm"]) }, vuln("npm", "npm", "package-lock.json"));
-    expect(own.reachability?.status).toBe("reachable");
+    expect(own.reachability?.status, own.reachability?.reason).toBe("dev-only");
   });
 
   it("package.json script names don't count, their commands do", async () => {
@@ -173,7 +179,9 @@ describe("applyReachability: npm", () => {
     const byName = await verdict({ ...base, "package.json": pkg({ express: "1", legacy: "1" }, { scripts: { "tsx:watch": "node x.js" } }) }, vuln("tsx", "npm", "package-lock.json"));
     expect(byName.reachability?.status).toBe("unreachable");
     const byCmd = await verdict({ ...base, "package.json": pkg({ express: "1", legacy: "1" }, { scripts: { dev: "tsx watch x.ts" } }) }, vuln("tsx", "npm", "package-lock.json"));
-    expect(byCmd.reachability?.status).toBe("reachable");
+    expect(byCmd.reachability?.status).toBe("dev-only");
+    const byStart = await verdict({ ...base, "package.json": pkg({ express: "1", legacy: "1" }, { scripts: { start: "tsx x.ts" } }) }, vuln("tsx", "npm", "package-lock.json"));
+    expect(byStart.reachability?.status).toBe("reachable");
   });
 
   it("reachable when named as a string (knex client)", async () => {
@@ -228,12 +236,12 @@ describe("applyReachability: npm", () => {
     expect(f.reachability?.reason).toContain("sequelize");
   });
 
-  it("unknown for dev, dynamic, no lockfile graph, and unsupported lockfiles", async () => {
+  it("dev-only for dev deps; unknown for dynamic, no lockfile graph, and unsupported lockfiles", async () => {
     const dev = await verdict(
       { "package.json": JSON.stringify({ devDependencies: { mocha: "1" } }), "package-lock.json": lock([], { mocha: ["debug"] }, ["mocha"]) },
       vuln("debug", "npm", "package-lock.json"),
     );
-    expect(dev.reachability?.status).toBe("unknown");
+    expect(dev.reachability?.status).toBe("dev-only");
 
     const dyn = await verdict(
       { "package.json": pkg({ lodash: "1" }), "package-lock.json": lock(["lodash"]), "a.js": "require(plugin)" },
@@ -292,7 +300,7 @@ describe("applyReachability: npm", () => {
     const onlyB = await verdict(files, vuln("only-b", "npm", "bun.lock"));
     expect(onlyB.reachability?.status, onlyB.reachability?.reason).toBe("unreachable");
     expect((await verdict(files, vuln("lonely", "npm", "bun.lock"))).reachability?.status).toBe("unknown"); // orphan
-    expect((await verdict(files, vuln("tough", "npm", "bun.lock"))).reachability?.status).toBe("unknown"); // dev-only
+    expect((await verdict(files, vuln("tough", "npm", "bun.lock"))).reachability?.status).toBe("dev-only");
     expect((await verdict({ ...files, "bun.lock": "{ not json" }, vuln("lonely", "npm", "bun.lock"))).reachability?.status).toBe("unknown");
   });
 
@@ -410,7 +418,7 @@ describe("applyReachability: PyPI", () => {
     const reqs2 = compiled(["legacy==1.0", "    # via -r requirements.in", "python-dotenv==1.0", "    # via legacy", "pytest==7.0", "    # via legacy"]);
     const ci = "jobs:\n  test:\n    run: python -m dotenv run app\n";
     const dot = await verdict({ "requirements.txt": reqs2, "ci.yml": ci }, vuln("python-dotenv", "PyPI", "requirements.txt"));
-    expect(dot.reachability?.status).toBe("reachable");
+    expect(dot.reachability?.status).toBe("dev-only"); // named in CI
     const pt = await verdict({ "requirements.txt": reqs2, "ci.yml": ci }, vuln("pytest", "PyPI", "requirements.txt"));
     expect(pt.reachability?.status, pt.reachability?.reason).toBe("unreachable");
   });
@@ -468,7 +476,7 @@ describe("applyReachability: PyPI", () => {
     expect((await verdict(files, vuln("starlette", "PyPI", "uv.lock"))).reachability?.status).toBe("reachable");
     expect((await verdict(files, vuln("markdown", "PyPI", "uv.lock"))).reachability?.status).toBe("unreachable");
     expect((await verdict(files, vuln("importlib-metadata", "PyPI", "uv.lock"))).reachability?.status).toBe("unreachable");
-    expect((await verdict(files, vuln("pytest", "PyPI", "uv.lock"))).reachability?.status).toBe("unknown");
+    expect((await verdict(files, vuln("pytest", "PyPI", "uv.lock"))).reachability?.status).toBe("dev-only");
     // FastAPI renders templates through jinja2 without the project importing it.
     const withJinja = { ...files, "uv.lock": uv.replace(/"markdown"/g, '"jinja2"'), "pyproject.toml": pyproject.replace("markdown", "jinja2") };
     expect((await verdict(withJinja, vuln("jinja2", "PyPI", "uv.lock"))).reachability?.status).toBe("unknown");
@@ -503,7 +511,7 @@ describe("applyReachability: PyPI", () => {
     const u3 = await verdict(files, vuln("urllib3", "PyPI", "poetry.lock", "critical"));
     expect(u3.reachability?.status).toBe("unreachable");
     expect(u3.severity).toBe("high");
-    expect((await verdict(files, vuln("pytest", "PyPI", "poetry.lock"))).reachability?.status).toBe("unknown");
+    expect((await verdict(files, vuln("pytest", "PyPI", "poetry.lock"))).reachability?.status).toBe("dev-only");
     const used = await verdict({ ...files, "app.py": "import requests\n" }, vuln("urllib3", "PyPI", "poetry.lock"));
     expect(used.reachability?.status).toBe("reachable");
   });

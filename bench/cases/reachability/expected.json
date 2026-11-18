@@ -9,7 +9,7 @@
     "request": "unreachable",
     "pg": "unknown",
     "pg-types": "unknown",
-    "minimist": "reachable"
+    "minimist": "dev-only"
   },
   "py-app": {
     "markupsafe": "reachable",
@@ -17,6 +17,6 @@
     "gunicorn": "reachable",
     "pyyaml": "unreachable",
     "psycopg2": "unknown",
-    "pluggy": "unknown"
+    "pluggy": "dev-only"
   }
 }

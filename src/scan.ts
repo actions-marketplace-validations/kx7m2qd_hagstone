@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { dedupe, sortFindings, type EngineName, type Finding } from "./core/finding.js";
 import { DEFAULT_IGNORES, isIgnored, loadIgnorePatterns } from "./core/ignore.js";
+import { pathScope } from "./core/scope.js";
 import { runGitleaks } from "./engines/gitleaks.js";
 import { overrideVar, resolveEngine } from "./engines/install.js";
 import type { BinaryEngine } from "./engines/manifest.js";
@@ -23,6 +24,8 @@ export interface ScanOptions {
   reachableOnly?: boolean;
   /** Ignore patterns from this file instead of `<root>/.hagstoneignore` (missing file → none). */
   ignoreFile?: string;
+  /** Report code and dependency findings in test and example paths too (default: hidden and counted). */
+  includeTests?: boolean;
 }
 
 export interface EngineStatus {
@@ -43,6 +46,19 @@ export interface ScanResult {
   ignores: string[];
   warnings: string[];
   engines: EngineStatus[];
+  /** Findings left out because they are in test or example code (see `includeTests`). */
+  hiddenInTests?: number;
+}
+
+/**
+ * Test and example code isn't deployed, so its code findings and its lockfiles' vulnerable packages
+ * are noise by default. Secrets and malicious packages stay: a leaked key or an installed attack
+ * package does harm wherever the file lives.
+ */
+export function hiddenByScope(f: Finding): boolean {
+  if (!f.scope) return false;
+  if (f.category === "code") return true;
+  return f.category === "dependency" && f.engine === "osv-scanner" && f.ruleId !== "pkg-known-malicious";
 }
 
 export async function scan(target: string, opts: ScanOptions = {}): Promise<ScanResult> {
@@ -95,6 +111,13 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
   }
 
   let kept = dedupe(findings);
+  for (const f of kept) {
+    const where = pathScope(f.location.path);
+    if (where !== "prod") f.scope = where;
+  }
+  const visible = opts.includeTests ? kept : kept.filter((f) => !hiddenByScope(f));
+  const hiddenInTests = kept.length - visible.length;
+  kept = visible;
   if (opts.reachability ?? true) {
     try {
       await applyReachability(root, kept, ignores);
@@ -111,5 +134,6 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
     ignores: ignores.slice(DEFAULT_IGNORES.length),
     warnings,
     engines: statuses,
+    hiddenInTests,
   };
 }

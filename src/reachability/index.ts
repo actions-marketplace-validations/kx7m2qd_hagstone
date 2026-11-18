@@ -17,6 +17,7 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { SEVERITY_ORDER, type Finding, type Reachability } from "../core/finding.js";
 import { isIgnored } from "../core/ignore.js";
+import { isDevContext } from "../core/scope.js";
 import { normalizePypi, parseRequirements } from "../engines/pkgrisk/manifests.js";
 import {
   keysFor,
@@ -37,7 +38,18 @@ import { pythonAstImports } from "./pyast.js";
 import { exactModules, moduleCandidates } from "./pypi-modules.js";
 
 type Where = { path: string; line: number };
-type Use = Where & { how: "imported" | "named" | "referenced" };
+/** `dev`: the evidence is in tests, examples or dev tooling (src/core/scope.ts), not shipped code. */
+type Use = Where & { how: "imported" | "named" | "referenced"; dev: boolean };
+const mkUse = (w: Where, how: Use["how"]): Use => ({ ...w, how, dev: isDevContext(w.path, how === "referenced") });
+
+/** The strongest evidence: the first from shipped code, else the first from tests or tooling. */
+const pickUse = (found: Use[]): Use | undefined => found.find((x) => !x.dev) ?? found[0];
+
+/** Record the first place a name is seen, but let shipped code replace evidence from tests or tooling. */
+function note(map: Map<string, Where>, key: string, w: Where): void {
+  const had = map.get(key);
+  if (!had || (isDevContext(had.path, false) && !isDevContext(w.path, false))) map.set(key, w);
+}
 
 const JS_SOURCE = /\.(?:[cm]?[jt]sx?|vue|svelte|astro)$/;
 const PY_SOURCE = /\.py$/;
@@ -72,7 +84,8 @@ interface Project {
   pyStrings: Map<string, Where>;
   jsDynamic?: Where;
   pyDynamic?: Where;
-  tooling: { path: string; text: string }[];
+  /** `runtime`: commands that run the deployed app (package.json `start`), not dev tooling. */
+  tooling: { path: string; text: string; runtime?: boolean }[];
   /** False if the walk hit MAX_FILES: no "unreachable" verdicts from a partial view. */
   complete: boolean;
   /** Manifests and lockfiles in the project directory itself, by file name. */
@@ -197,6 +210,23 @@ export function scrubTooling(file: string, text: string): string {
     .join("\n");
 }
 
+/** Scripts that run the deployed app (`"start": "next start"`), so what they name counts as production use. */
+const RUNTIME_SCRIPT = /^(?:pre|post)?start$/;
+
+/** The commands of package.json's runtime scripts, one per line. */
+function packageJsonRuntime(text: string): string {
+  try {
+    const scripts = (JSON.parse(text) as { scripts?: unknown }).scripts;
+    if (!scripts || typeof scripts !== "object") return "";
+    return Object.entries(scripts as Record<string, unknown>)
+      .filter(([k, v]) => RUNTIME_SCRIPT.test(k) && typeof v === "string")
+      .map(([, v]) => v)
+      .join("\n");
+  } catch {
+    return "";
+  }
+}
+
 /** package.json without its dependency lists, so a package being declared doesn't count as being used. */
 function packageJsonTooling(text: string): string {
   try {
@@ -265,11 +295,11 @@ async function analyze(root: string, dir: string, ignores: string[]): Promise<Pr
       const text = await readSmallSource(root, path);
       if (text === undefined) continue;
       const r = jsImports(text);
-      for (const h of r.imports) if (!p.js.has(h.name)) p.js.set(h.name, { path, line: h.line });
+      for (const h of r.imports) note(p.js, h.name, { path, line: h.line });
       if (r.dynamicLine !== undefined && !p.jsDynamic) p.jsDynamic = { path, line: r.dynamicLine };
       for (const m of text.matchAll(JS_STRING)) {
         const name = npmPackageOf(m[2] as string);
-        if (name && !p.jsStrings.has(name)) p.jsStrings.set(name, { path, line: lineAt(text, m.index) });
+        if (name) note(p.jsStrings, name, { path, line: lineAt(text, m.index) });
       }
       // Config files (vite.config.ts, .eslintrc.cjs) also name plugins as strings.
       if (TOOLING.test(base)) p.tooling.push({ path, text: scrubTooling(path, text) });
@@ -281,19 +311,23 @@ async function analyze(root: string, dir: string, ignores: string[]): Promise<Pr
       const r: FileImports = ast.get(join(root, path)) ?? pyImports(text);
       for (const h of r.imports) {
         const k = h.name.toLowerCase();
-        if (!p.py.has(k)) p.py.set(k, { path, line: h.line });
+        note(p.py, k, { path, line: h.line });
       }
       if (r.dynamicLine !== undefined && !p.pyDynamic) p.pyDynamic = { path, line: r.dynamicLine };
       for (const m of text.matchAll(/(['"])([A-Za-z_][\w.]*)\1/g)) {
         const k = (m[2] as string).split(".")[0]!.toLowerCase();
-        if (!p.pyStrings.has(k)) p.pyStrings.set(k, { path, line: lineAt(text, m.index) });
+        note(p.pyStrings, k, { path, line: lineAt(text, m.index) });
       }
       continue;
     }
     if (TOOLING.test(base) && !NOT_TOOLING.test(base)) {
       let text = await readSmallSource(root, path);
       if (text === undefined) continue;
-      if (base === "package.json") text = packageJsonTooling(text);
+      if (base === "package.json") {
+        const runtime = packageJsonRuntime(text);
+        if (runtime) p.tooling.push({ path, text: runtime, runtime: true });
+        text = packageJsonTooling(text);
+      }
       if (base === "pyproject.toml") text = pyprojectTooling(text);
       p.tooling.push({ path, text: scrubTooling(path, text) });
     }
@@ -354,14 +388,21 @@ interface Eco {
   noGraph: string;
 }
 
-function referenced(p: Project, tokens: string[]): Where | undefined {
+/** First tooling file naming one of the tokens; tooling that runs the deployed app (Dockerfile, `start`) wins. */
+function referenced(p: Project, tokens: string[]): Use | undefined {
+  let devHit: Use | undefined;
   for (const t of p.tooling) {
     for (const tok of tokens) {
       const line = findToken(t.text, tok);
-      if (line !== undefined) return { path: t.path, line: t.path.endsWith("package.json") ? 1 : line };
+      if (line === undefined) continue;
+      const dev = !t.runtime && isDevContext(t.path, true);
+      const hit: Use = { path: t.path, line: t.path.endsWith("package.json") ? 1 : line, how: "referenced", dev };
+      if (!dev) return hit;
+      devHit ??= hit;
+      break;
     }
   }
-  return undefined;
+  return devHit;
 }
 
 function npmEco(p: Project, file: string): Eco {
@@ -374,8 +415,12 @@ function npmEco(p: Project, file: string): Eco {
       // (`client: 'pg'`). Otherwise every short word in quotes would match some package (`"d"`, `"ms"`).
       const declared = !p.npmDeclared || p.npmDeclared.prod.has(name) || p.npmDeclared.dev.has(name);
       const str = declared ? p.jsStrings.get(name) : undefined;
-      const ref = imp || str ? undefined : referenced(p, toolingTokens([name, ...(p.bins.get(name) ?? [])], declared));
-      const u: Use | undefined = imp ? { ...imp, how: "imported" } : str ? { ...str, how: "named" } : ref ? { ...ref, how: "referenced" } : undefined;
+      const found = [imp && mkUse(imp, "imported"), str && mkUse(str, "named")].filter((x): x is Use => !!x);
+      if (!found.some((x) => !x.dev)) {
+        const ref = referenced(p, toolingTokens([name, ...(p.bins.get(name) ?? [])], declared));
+        if (ref) found.push(ref);
+      }
+      const u = pickUse(found);
       p.uses.set(k, u);
       return u;
     },
@@ -411,32 +456,27 @@ function pypiEco(p: Project, file: string): Eco {
       const k = `pypi:${name}`;
       if (p.uses.has(k)) return p.uses.get(k);
       const mods = moduleCandidates(name).map((m) => m.toLowerCase());
-      let u: Use | undefined;
+      const found: Use[] = [];
       for (const m of mods) {
         const imp = p.py.get(m);
-        if (imp) {
-          u = { ...imp, how: "imported" };
-          break;
-        }
+        if (imp) found.push(mkUse(imp, "imported"));
       }
       // As for npm: quoted strings only count for declared packages (Django INSTALLED_APPS, Celery brokers).
       const declared = !direct.size || direct.has(name);
-      if (!u && declared)
+      if (declared && !found.some((x) => !x.dev))
         for (const m of mods) {
           const s = p.pyStrings.get(m);
-          if (s) {
-            u = { ...s, how: "named" };
-            break;
-          }
+          if (s) found.push(mkUse(s, "named"));
         }
-      if (!u) {
+      if (!found.some((x) => !x.dev)) {
         // Free text only matches exact names; guessed module names (pytest → "test") count after `-m`.
         const exact = exactModules(name);
         const ref =
           referenced(p, toolingTokens([...new Set([raw, name, ...exact.map((m) => m.toLowerCase()), ...exact])], declared)) ??
           referenced(p, toolingTokens(moduleCandidates(name).map((m) => `-m ${m}`), declared));
-        if (ref) u = { ...ref, how: "referenced" };
+        if (ref) found.push(ref);
       }
+      const u = pickUse(found);
       p.uses.set(k, u);
       return u;
     },
@@ -458,7 +498,10 @@ const describeUse = (name: string, u: Use) =>
       : `${name} is referenced in ${u.path}:${u.line}`;
 
 interface Walk {
+  /** The nearest package on the path that shipped code uses. */
   live?: { chain: string[]; use: Use };
+  /** Failing that, the nearest one only tests, examples or dev tooling use. */
+  devLive?: { chain: string[]; use: Use };
   prodRoots: string[];
   devRoots: string[];
   orphan: boolean;
@@ -479,8 +522,12 @@ function walkUp(g: DepGraph, start: string[], eco: Eco): Walk {
     if (u) {
       const chain: string[] = [];
       for (let c: string | undefined = k; c !== undefined; c = prev.get(c)) chain.push(g.nodes.get(c)?.name ?? c);
-      w.live = { chain: chain.reverse(), use: u };
-      return w;
+      if (!u.dev) {
+        w.live = { chain: chain.reverse(), use: u };
+        return w;
+      }
+      // Keep walking: something shipped code uses may pull this package in further up.
+      w.devLive ??= { chain: chain.reverse(), use: u };
     }
     if (g.roots.has(k)) w.prodRoots.push(n.name);
     if (g.devRoots.has(k)) w.devRoots.push(n.name);
@@ -504,42 +551,68 @@ const list = (names: string[]) => {
   return u.length <= 3 ? u.join(", ") : `${u.slice(0, 3).join(", ")} and ${u.length - 3} more`;
 };
 
+const DEV_NOTE = "so it only runs while developing, building or testing";
+
+/** "X is pulled in by Y (X ← … ← Y); Y is imported at …" or "X is imported at …". */
+function describeChain(rawName: string, live: { chain: string[]; use: Use }): string {
+  const [, ...rest] = live.chain;
+  if (!rest.length) return describeUse(rawName, live.use);
+  const via = rest.length > 1 ? ` (${live.chain.join(" ← ")})` : "";
+  return `${rawName} is pulled in by ${rest[rest.length - 1]}${via}; ${describeUse(rest[rest.length - 1]!, live.use)}`;
+}
+
 function verdict(p: Project, eco: Eco, g: DepGraph | undefined, rawName: string, version: string | undefined): Reachability {
   const name = eco.norm(rawName);
   const direct = eco.use(name);
-  if (direct) return { status: "reachable", reason: `${describeUse(rawName, direct)}.`, evidence: { path: direct.path, line: direct.line } };
+  const at = (u: Use) => ({ path: u.path, line: u.line });
+  if (direct && !direct.dev) return { status: "reachable", reason: `${describeUse(rawName, direct)}.`, evidence: at(direct) };
 
   if (!g) {
-    if (eco.declared?.dev.has(name) && !eco.declared.prod.has(name))
-      return { status: "unknown", reason: `${rawName} is a dev dependency with no import found; dev tools are often run through CLIs or config Hagstone can't fully trace.` };
+    const devDeclared = eco.declared?.dev.has(name) && !eco.declared.prod.has(name);
+    if (devDeclared)
+      return {
+        status: "dev-only",
+        reason: `${rawName} is a dev dependency${direct ? ` (${describeUse(rawName, direct)})` : ""}, ${DEV_NOTE}.`,
+        ...(direct ? { evidence: at(direct) } : {}),
+      };
+    if (direct)
+      return {
+        status: "unknown",
+        reason: `${describeUse(rawName, direct)}, which is test or dev tooling, but ${eco.noGraph}, so Hagstone can't tell whether a package the app uses depends on it.`,
+        evidence: at(direct),
+      };
     return { status: "unknown", reason: `No import of ${rawName} found, but ${eco.noGraph}, so Hagstone can't tell whether a package the project uses depends on it.` };
   }
   const start = keysFor(g, name, version);
   if (!start.length) return { status: "unknown", reason: `${rawName} isn't in the lockfile's dependency graph, so Hagstone can't trace what pulls it in.` };
 
   const w = walkUp(g, start, eco);
-  if (w.live) {
-    const [, ...rest] = w.live.chain;
-    const via = rest.length > 1 ? ` (${w.live.chain.join(" ← ")})` : "";
-    return {
-      status: "reachable",
-      reason: `${rawName} is pulled in by ${rest[rest.length - 1]}${via}; ${describeUse(rest[rest.length - 1]!, w.live.use)}.`,
-      evidence: { path: w.live.use.path, line: w.live.use.line },
-    };
-  }
-  if (w.devRoots.length)
-    return { status: "unknown", reason: `${rawName} is pulled in by dev dependency ${list(w.devRoots)}; dev tools are often run through CLIs or config Hagstone can't fully trace.` };
-  if (w.orphan || !w.prodRoots.length)
+  if (w.live) return { status: "reachable", reason: `${describeChain(rawName, w.live)}.`, evidence: at(w.live.use) };
+  if (w.orphan || (!w.prodRoots.length && !w.devRoots.length))
     return { status: "unknown", reason: `Hagstone couldn't trace every package that pulls in ${rawName} back to the project's own dependencies.` };
+  const devUse = w.devLive ? `; the only use found is in tests or dev tooling: ${describeChain(rawName, w.devLive)}` : "";
+  // Only dev dependencies pull it in: it isn't installed with the app at all.
+  if (!w.prodRoots.length)
+    return {
+      status: "dev-only",
+      reason: `${rawName} is only pulled in by dev dependencies (${list(w.devRoots)})${devUse}, ${DEV_NOTE}.`,
+      ...(w.devLive ? { evidence: at(w.devLive.use) } : {}),
+    };
   for (const [loader, loads] of Object.entries(eco.loaders)) {
     if (![...w.names].some((n) => loads.includes(n))) continue;
     const lk = keysFor(g, loader);
     const used = eco.use(loader) ?? (lk.length ? walkUp(g, lk, eco).live?.use : undefined);
-    if (used) return { status: "unknown", reason: `${rawName} isn't imported, but ${loader} (used at ${used.path}:${used.line}) can load it by name at runtime.`, evidence: { path: used.path, line: used.line } };
+    if (used && !used.dev) return { status: "unknown", reason: `${rawName} isn't imported, but ${loader} (used at ${used.path}:${used.line}) can load it by name at runtime.`, evidence: at(used) };
   }
   if (eco.dynamic) return { status: "unknown", reason: `No import of ${rawName} found, but the project loads modules dynamically.`, evidence: eco.dynamic };
   if (!p.complete) return { status: "unknown", reason: `No import of ${rawName} found, but the project was too large to read completely.` };
   const roots = w.prodRoots.filter((r) => r !== name);
+  if (w.devLive || w.devRoots.length)
+    return {
+      status: "dev-only",
+      reason: `Shipped code doesn't import ${rawName}${roots.length ? ` or the packages that pull it in (${list(roots)})` : ""}${devUse || `; dev dependencies ${list(w.devRoots)} also pull it in`}, ${DEV_NOTE}.`,
+      ...(w.devLive ? { evidence: at(w.devLive.use) } : {}),
+    };
   return {
     status: "unreachable",
     reason: roots.length
@@ -570,14 +643,15 @@ export async function applyReachability(root: string, findings: Finding[], ignor
     const ecosystem = f.dependency.ecosystem as "npm" | "PyPI";
     const eco = ecosystem === "npm" ? npmEco(p, file) : pypiEco(p, file);
     const r = verdict(p, eco, graphFor(p, ecosystem, file), f.dependency.name, f.dependency.version);
-    if (r.status === "unreachable") {
+    if (r.status === "unreachable" || r.status === "dev-only") {
+      const label = r.status === "unreachable" ? "Likely unreachable" : "Development only";
       const lower = SEVERITY_ORDER[Math.min(SEVERITY_ORDER.indexOf(f.severity) + 1, SEVERITY_ORDER.length - 1)]!;
       if (lower !== f.severity) {
         r.originalSeverity = f.severity;
-        f.message += ` Likely unreachable: ${r.reason} Shown as ${lower} instead of ${f.severity}; still upgrade or remove it.`;
+        f.message += ` ${label}: ${r.reason} Shown as ${lower} instead of ${f.severity}; still upgrade or remove it.`;
         f.severity = lower;
       } else {
-        f.message += ` Likely unreachable: ${r.reason}`;
+        f.message += ` ${label}: ${r.reason}`;
       }
     }
     f.reachability = r;

@@ -133,3 +133,36 @@ def download():
     name = request.args.get("file")
     # ok: py-xss
     return send_file(os.path.join("/srv/exports", name))
+
+
+@app.route("/api/users")
+def api_users():
+    page = request.args.get("page", 1)
+    # ok: py-xss
+    return User.to_collection_dict(User.query, page, 10, "api.get_users")
+
+
+@app.route("/fmt")
+def fmt():
+    name = request.args.get("name")
+    # ruleid: py-xss
+    return "<p>Hello {}</p>".format(name)
+
+
+@app.route("/joined")
+def joined():
+    tags = request.args.getlist("tag")
+    # ruleid: py-xss
+    return "<li>".join(tags)
+
+@app.route("/names")
+def names():
+    q = request.args.get("q")
+    # ok: py-xss
+    return {"names": [str(n) for n in lookup(q)]}
+
+@app.route("/names-list")
+def names_list():
+    q = request.args.get("q")
+    # ok: py-xss
+    return [str(n) for n in lookup(q)], 200

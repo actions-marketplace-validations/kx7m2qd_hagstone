@@ -17,8 +17,13 @@ export function toText(result: ScanResult, opts: { color: boolean }): string {
   const c = (code: string, s: string) => (opts.color ? `${code}${s}${RESET}` : s);
   const lines: string[] = [];
 
+  // Vulnerable packages only tests or dev tooling use are folded into one summary line each.
+  const devOnly = (f: ScanResult["findings"][number]) => f.category === "dependency" && f.reachability?.status === "dev-only";
+  const folded = result.findings.filter(devOnly);
+
   // Every string from a finding is untrusted (it can come from the scanned code).
   for (const f of result.findings) {
+    if (devOnly(f)) continue;
     const where = safe(`${f.location.path}:${f.location.startLine}`);
     lines.push(`${c(COLOR[f.severity], f.severity.toUpperCase().padEnd(8))} ${c(BOLD, safe(f.title))}`);
     lines.push(`         ${where}  ${c(DIM, safe(`${f.engine}/${f.ruleId}${f.cwe.length ? "  " + f.cwe.join(",") : ""}`))}`);
@@ -29,11 +34,21 @@ export function toText(result: ScanResult, opts: { color: boolean }): string {
     }
     if (f.reachability) {
       const r = f.reachability;
-      const tag = r.status === "reachable" ? c(COLOR.high, "reachable") : r.status === "unreachable" ? c(DIM, "unreachable") : "unknown";
+      const tag = r.status === "reachable" ? c(COLOR.high, "reachable") : r.status === "unknown" ? "unknown" : c(DIM, r.status);
       const was = r.originalSeverity ? c(DIM, ` (was ${r.originalSeverity})`) : "";
       lines.push(`         ${c(DIM, "reach:")} ${tag}${was}  ${c(DIM, safe(r.reason).slice(0, 200))}`);
     }
     lines.push(`         ${safe(f.message).split("\n")[0]?.slice(0, 240)}`);
+    lines.push("");
+  }
+
+  if (folded.length) {
+    lines.push(c(BOLD, `${folded.length} vulnerable ${folded.length === 1 ? "package is" : "packages are"} only used by tests or dev tooling`) + c(DIM, " (severity lowered one level; --format json for details):"));
+    for (const f of folded) {
+      const d = f.dependency!;
+      const fix = d.fixedVersions[0] ? ` → ${d.fixedVersions[0]}` : "";
+      lines.push(`         ${c(COLOR[f.severity], f.severity.padEnd(8))} ${safe(`${d.name} ${d.version}${fix}`)}  ${c(DIM, safe(f.location.path))}`);
+    }
     lines.push("");
   }
 
@@ -48,6 +63,8 @@ export function toText(result: ScanResult, opts: { color: boolean }): string {
   lines.push(
     c(DIM, result.engines.map((e) => `${e.engine} ${e.ok ? `${e.findings} in ${e.ms}ms` : "FAILED"}`).join(" · ")),
   );
+  if (result.hiddenInTests)
+    lines.push(c(DIM, `${result.hiddenInTests} finding${result.hiddenInTests === 1 ? "" : "s"} in test or example code not shown (--include-tests to show)`));
   if (result.ignores.length) lines.push(c(DIM, `excluded by .hagstoneignore: ${safe(result.ignores.join(", ")).slice(0, 300)}`));
   for (const w of result.warnings) lines.push(c(COLOR.medium, `warning: ${safe(w)}`));
   return lines.join("\n");

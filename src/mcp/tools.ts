@@ -187,6 +187,10 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
           description: "Subset of engines to run. Default: all.",
         },
         offline: { type: "boolean", description: "Skip npm/PyPI registry lookups. Default false." },
+        include_tests: {
+          type: "boolean",
+          description: "Also report code and dependency findings in test and example code (test/, examples/, *.spec.ts, ...). Default false.",
+        },
         limit: { type: "integer", minimum: 1, maximum: MAX_LIMIT, description: `Max findings returned (default ${DEFAULT_LIMIT}).` },
       },
       additionalProperties: false,
@@ -203,6 +207,7 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
       }
       const engines = (engineArg as EngineName[] | undefined) ?? ALL_ENGINES;
       const offline = optBool(args, "offline") ?? false;
+      const includeTests = optBool(args, "include_tests") ?? false;
       const limitArg = args.limit;
       if (limitArg !== undefined && (typeof limitArg !== "number" || !Number.isInteger(limitArg) || limitArg < 1)) {
         throw new ToolError("`limit` must be a positive integer");
@@ -215,7 +220,7 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
       const mode = paths ? "paths" : scope;
 
       if (mode === "all") {
-        result = await runScan(root, { engines, offline });
+        result = await runScan(root, { engines, offline, includeTests });
       } else {
         let selected: string[];
         if (paths) selected = await Promise.all(paths.map((p) => inside(root, p)));
@@ -239,7 +244,7 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
           files = copied;
           if (skipped.length) notes.push(`skipped: ${skipped.join(", ")}`);
           if (copied.length && codeEngines.length) {
-            const r = await runScan(dest, { engines: codeEngines, reachability: false, ignoreFile: join(root, ".hagstoneignore") });
+            const r = await runScan(dest, { engines: codeEngines, reachability: false, ignoreFile: join(root, ".hagstoneignore"), includeTests });
             const fix = (s: string) => s.split(dest).join(root);
             parts.push({ ...r, warnings: r.warnings.map(fix), engines: r.engines.map((e) => (e.error ? { ...e, error: fix(e.error) } : e)) });
           }
@@ -247,7 +252,7 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
           await rm(tmp, { recursive: true, force: true });
         }
         if (depsChanged && depEngines.length) {
-          parts.push(await runScan(root, { engines: depEngines, offline }));
+          parts.push(await runScan(root, { engines: depEngines, offline, includeTests }));
           notes.push("a dependency manifest changed, so dependencies were checked for the whole project");
         }
         if (!parts.length) {
@@ -268,6 +273,7 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
           ignores: parts[0]!.ignores,
           warnings: parts.flatMap((p) => p.warnings),
           engines: parts.flatMap((p) => p.engines),
+          hiddenInTests: parts.reduce((n, p) => n + (p.hiddenInTests ?? 0), 0),
         };
       }
 
@@ -284,6 +290,7 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
         ...(result.ignores.length ? { hagstoneignore: result.ignores } : {}),
         ...(failed.length ? { engine_errors: failed } : {}),
         ...(result.warnings.length || notes.length ? { warnings: [...notes, ...result.warnings] } : {}),
+        ...(result.hiddenInTests ? { hidden_in_tests: result.hiddenInTests } : {}),
         ...(result.findings.length > shown.length
           ? { hint: `${result.findings.length - shown.length} more not shown. Raise \`limit\`, or narrow with \`paths\`.` }
           : {}),

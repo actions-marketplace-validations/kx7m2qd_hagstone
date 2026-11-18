@@ -28,10 +28,15 @@ Usage:
       --offline                    Turn off the pkgrisk network checks (registry lookups). Typosquat,
                                    install-script and known-malicious checks still run.
       --no-reachability            Skip the reachability check. By default, vulnerable dependencies
-                                   that nothing in the project uses are shown one severity level
-                                   lower, but still fail --fail-on at their original severity.
-      --trust-reachability         Let --fail-on use the lowered severity of unreachable findings
+                                   that nothing in the project uses, or that only tests and dev
+                                   tooling use, are shown one severity level lower, but still fail
+                                   --fail-on at their original severity.
+      --trust-reachability         Let --fail-on use the lowered severity of unreachable and dev-only
+                                   findings
       --reachable-only             Hide unreachable findings entirely (implies --trust-reachability)
+      --include-tests              Also report code and dependency findings in test and example code
+                                   (test/, __tests__/, e2e/, examples/, *.spec.ts, test_*.py, ...).
+                                   Hidden by default; secrets and malicious packages are always shown.
       --ignore-file <file>         Read ignore patterns from this file instead of <path>/.hagstoneignore
                                    (CI: pass the base branch's copy so a PR can't un-scan its own code)
 
@@ -62,6 +67,16 @@ function fail(message: string): never {
   process.exit(2);
 }
 
+/**
+ * Write to stdout and wait until the OS has the data. When stdout is a pipe, Node writes it
+ * asynchronously, and `process.exit()` right after a plain write cut large reports off at 64 KB.
+ */
+function writeStdout(text: string): Promise<void> {
+  return new Promise((resolve, reject) =>
+    process.stdout.write(text, (e) => (e && (e as NodeJS.ErrnoException).code !== "EPIPE" ? reject(e) : resolve())),
+  );
+}
+
 function parseEngines(value: string | undefined): EngineName[] | undefined {
   if (!value) return undefined;
   const list = value.split(",").map((s) => s.trim());
@@ -84,6 +99,7 @@ async function cmdScan(args: string[]): Promise<number> {
       "no-reachability": { type: "boolean", default: false },
       "trust-reachability": { type: "boolean", default: false },
       "ignore-file": { type: "string" },
+      "include-tests": { type: "boolean", default: false },
     },
   });
   const format = values.format;
@@ -98,6 +114,7 @@ async function cmdScan(args: string[]): Promise<number> {
     reachability: !values["no-reachability"],
     reachableOnly: values["reachable-only"],
     ignoreFile: values["ignore-file"],
+    includeTests: values["include-tests"],
   });
 
   const report =
@@ -111,7 +128,7 @@ async function cmdScan(args: string[]): Promise<number> {
     await writeFile(values.output, report + "\n");
     process.stderr.write(`${TOOL_NAME}: wrote ${result.findings.length} findings to ${values.output}\n`);
   } else {
-    process.stdout.write(report + "\n");
+    await writeStdout(report + "\n");
   }
   if (format !== "text") for (const w of result.warnings) process.stderr.write(`warning: ${w}\n`);
 

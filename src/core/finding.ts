@@ -4,6 +4,9 @@ export type Severity = "critical" | "high" | "medium" | "low" | "info";
 export type Category = "code" | "dependency" | "secret";
 export type EngineName = "opengrep" | "osv-scanner" | "gitleaks" | "pkgrisk";
 
+/** Rule id shared by every known-vulnerable dependency finding (one finding per package version). */
+export const VULNERABLE_DEPENDENCY = "vulnerable-dependency";
+
 export const SEVERITY_ORDER: readonly Severity[] = ["critical", "high", "medium", "low", "info"];
 
 export interface Location {
@@ -25,7 +28,13 @@ export interface DependencyInfo {
   fixedVersions: string[];
 }
 
-export type ReachabilityStatus = "reachable" | "unreachable" | "unknown";
+/**
+ * reachable: production code (or something it uses) imports the package.
+ * dev-only: only tests, examples, or build/lint/test tooling use it, or only dev dependencies pull it in.
+ * unreachable: nothing in the project uses it.
+ * unknown: Hagstone can't tell.
+ */
+export type ReachabilityStatus = "reachable" | "dev-only" | "unreachable" | "unknown";
 
 /** Whether the project's own code uses a vulnerable dependency (import-level, not call-level). */
 export interface Reachability {
@@ -34,7 +43,7 @@ export interface Reachability {
   reason: string;
   /** Where the import or reference was found (reachable), or what blocked a verdict (unknown). */
   evidence?: { path: string; line: number };
-  /** Severity before an `unreachable` verdict lowered it by one level. */
+  /** Severity before an `unreachable` or `dev-only` verdict lowered it by one level. */
   originalSeverity?: Severity;
 }
 
@@ -66,6 +75,8 @@ export interface Finding {
   reachability?: Reachability;
   /** Source → sink steps for taint findings. */
   dataflow?: DataflowStep[];
+  /** Set when the file is test or example code (see src/core/scope.ts); absent for shipped code. */
+  scope?: "test" | "example";
 }
 
 export function fingerprint(...parts: string[]): string {
@@ -118,11 +129,14 @@ export function gateSeverity(f: Finding, trustReachability = false): Severity {
   return trustReachability ? f.severity : (f.reachability?.originalSeverity ?? f.severity);
 }
 
+/** Findings reachability lowered sort after the rest of their severity. */
+const lowered = (f: Finding) => Number(f.reachability?.status === "unreachable" || f.reachability?.status === "dev-only");
+
 export function sortFindings(findings: Finding[]): Finding[] {
   return [...findings].sort(
     (a, b) =>
       SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) ||
-      Number(a.reachability?.status === "unreachable") - Number(b.reachability?.status === "unreachable") ||
+      lowered(a) - lowered(b) ||
       a.location.path.localeCompare(b.location.path) ||
       a.location.startLine - b.location.startLine,
   );

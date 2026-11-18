@@ -1,4 +1,4 @@
-import type { Finding, Severity } from "../core/finding.js";
+import { VULNERABLE_DEPENDENCY, type Finding, type Severity } from "../core/finding.js";
 import { TOOL_NAME, TOOL_URI, TOOL_VERSION } from "../version.js";
 import type { ScanResult } from "../scan.js";
 
@@ -41,8 +41,16 @@ export function toSarif(result: ScanResult): object {
             rules: [...rules.entries()].map(([key, f]) => ({
               id: key,
               name: f.ruleId,
-              shortDescription: { text: f.title },
-              fullDescription: { text: f.category === "dependency" ? f.title : f.message },
+              // One rule covers every vulnerable package, so its text can't be any one finding's title.
+              shortDescription: { text: f.ruleId === VULNERABLE_DEPENDENCY ? "Dependency with known vulnerabilities" : f.title },
+              fullDescription: {
+                text:
+                  f.ruleId === VULNERABLE_DEPENDENCY
+                    ? "A package version the project installs has published security advisories. Each result lists them and the lowest version that fixes them all."
+                    : f.category === "dependency"
+                      ? f.title
+                      : f.message,
+              },
               defaultConfiguration: { level: LEVEL[f.severity] },
               properties: {
                 "security-severity": SECURITY_SEVERITY[f.severity],

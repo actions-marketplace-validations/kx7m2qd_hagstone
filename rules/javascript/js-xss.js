@@ -72,3 +72,24 @@ app.get('/proxy', async (req, res) => {
   // ruleid: js-xss
   res.send(page.data);
 });
+
+app.get('/echo/:id', (req, res) => {
+  // ok: js-xss
+  res.send(req.params);
+});
+
+app.get('/search-json', (req, res) => {
+  // ok: js-xss
+  res.send({ q: req.query.q });
+});
+
+app.get('/keys/:a/:b', (req, res) => {
+  const keys = Object.keys(req.params);
+  // ok: js-xss
+  res.send(keys.map((k) => [k, req.params[k]]));
+});
+
+app.get('/user/:name', (req, res) => {
+  // ruleid: js-xss
+  res.send(req.params.name);
+});

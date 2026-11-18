@@ -24,3 +24,6 @@ jobs:
       - uses: ./
         with:
           fail-on: high
+          # Gate dev-only and unreachable dependencies at their lowered severity: a vulnerable
+          # package only our build/test tooling pulls in (vite, vitest) shouldn't block main.
+          trust-reachability: true

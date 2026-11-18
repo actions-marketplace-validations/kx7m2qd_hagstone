@@ -13,10 +13,13 @@ inputs:
     description: Fail the check if a finding is at least this severe (critical, high, medium, low, info, none).
     default: high
   trust-reachability:
-    description: Let fail-on use the lowered severity of dependencies nothing in the project uses.
+    description: Let fail-on use the lowered severity of dependencies nothing uses, or only tests and dev tooling use.
     default: "false"
   reachable-only:
     description: Leave unreachable dependency findings out of the report entirely.
+    default: "false"
+  include-tests:
+    description: Also report code and dependency findings in test and example code (hidden by default).
     default: "false"
   offline:
     description: Skip the registry lookups in the supply-chain checks (npm/PyPI package names only).
@@ -89,6 +92,7 @@ runs:
         IN_FAIL_ON: ${{ inputs.fail-on }}
         IN_TRUST: ${{ inputs.trust-reachability }}
         IN_REACHABLE_ONLY: ${{ inputs.reachable-only }}
+        IN_INCLUDE_TESTS: ${{ inputs.include-tests }}
         IN_OFFLINE: ${{ inputs.offline }}
         IN_ENGINES: ${{ inputs.engines }}
         IN_SARIF: ${{ inputs.sarif-file }}
@@ -120,6 +124,7 @@ runs:
 
         [ "$IN_TRUST" = "true" ] && args+=(--trust-reachability)
         [ "$IN_REACHABLE_ONLY" = "true" ] && args+=(--reachable-only)
+        [ "$IN_INCLUDE_TESTS" = "true" ] && args+=(--include-tests)
         [ "$IN_OFFLINE" = "true" ] && args+=(--offline)
         [ -n "$IN_ENGINES" ] && args+=(--engines "$IN_ENGINES")
         set +e

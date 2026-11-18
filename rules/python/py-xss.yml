@@ -69,10 +69,18 @@ rules:
           - pattern-either:
               - pattern: return $X
               - pattern: return $X, ...
-          # Dicts and lists are serialized to JSON.
+          # Dicts and lists (including comprehensions) are serialized to JSON.
           - pattern-not: return {...}
           - pattern-not: return [...]
           - pattern-not: return {...}, ...
+          - pattern-not: return [...], ...
+          - pattern-not: return [$E for $V in $I]
+          - pattern-not: return [$E for $V in $I], ...
+          # What a helper returns (`User.to_collection_dict(...)`, `serialize(...)`) is usually a dict
+          # or a response object, not HTML. Calls that build strings are a separate sink below; HTML
+          # response constructors and Markup are the body sinks at the end.
+          - pattern-not: return $FN(...)
+          - pattern-not: return $FN(...), ...
           # Autoescaped templates, and response objects whose body is checked as its own sink below
           # (a sanitizer would also hide `Markup(...)` passed into them).
           - metavariable-pattern:
@@ -95,6 +103,34 @@ rules:
               $X = flask.Response(...)
               ...
               return $X
+          - focus-metavariable: $X
+      # A returned string built by a call: `"<p>{}</p>".format(name)`, `str(...)`, `"".join(...)`.
+      - patterns:
+          - pattern-inside: |
+              @$APP.$ROUTE(...)
+              def $F(...):
+                ...
+          - metavariable-regex:
+              metavariable: $ROUTE
+              regex: ^(route|get|post|put|patch|delete)$
+          - pattern-either:
+              - pattern: return $X
+              - pattern: return $X, ...
+          # Dicts and lists are sent as JSON, even when they hold `str(...)` values.
+          - pattern-not: return {...}
+          - pattern-not: return [...]
+          - pattern-not: return {...}, ...
+          - pattern-not: return [...], ...
+          - pattern-not: return [$E for $V in $I]
+          - pattern-not: return [$E for $V in $I], ...
+          - metavariable-pattern:
+              metavariable: $X
+              pattern-either:
+                - pattern: $S.format(...)
+                - pattern: $S.join(...)
+                - pattern: $S.replace(...)
+                - pattern: $S.strip(...)
+                - pattern: str(...)
           - focus-metavariable: $X
       # Only the body; the headers dict in `make_response((body, headers))` is not HTML.
       - patterns:

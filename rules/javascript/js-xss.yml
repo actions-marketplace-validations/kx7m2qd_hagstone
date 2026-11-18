@@ -75,6 +75,17 @@ rules:
                       - pattern: $RES.write($X, ...)
                       - pattern: $RES.end($X, ...)
                       - pattern: $RES.status(...).send($X)
+                  # Objects and arrays are sent as JSON, not HTML: `res.send(req.query)`,
+                  # `res.send({ user })`, `res.send(ids.map(...))`.
+                  - pattern-not: $RES.send({...})
+                  - pattern-not: $RES.send([...])
+                  - pattern-not: $RES.status(...).send({...})
+                  - pattern-not: $RES.status(...).send([...])
+                  - pattern-not: $RES.send($Q.params)
+                  - pattern-not: $RES.send($Q.query)
+                  - pattern-not: $RES.send($A.map(...))
+                  - pattern-not: $RES.send($A.filter(...))
+                  - pattern-not: $RES.send(Object.$KEYS(...))
               - pattern: $EL.innerHTML = $X
               - pattern: $EL.outerHTML = $X
               - pattern: $EL.insertAdjacentHTML($POS, $X)

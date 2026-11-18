@@ -12,45 +12,55 @@ containers, SBOM and licenses, running apps and APIs (DAST), IDE, dashboard and 
 shouldn't need a second tool. On top of that coverage it **finds fewer, realer issues, proves which ones
 matter, and fixes them**, and it's built for codebases that AI writes.
 
-**Who we compete with: Sparrow** (SAST / DAST / SCA / RASP suite). Other platforms (Checkmarx One,
-Snyk, GitHub Advanced Security, Aikido) sell the same "one platform" promise; we have to match their
-coverage and beat them on quality.
+**Who we compete with: every application security tool** (agreed 2026-11-18). A buyer should be able
+to replace any of them, or several at once, with Hagstone:
+
+| Kind of tool | Examples | What we must match, then beat |
+|---|---|---|
+| Enterprise SAST/DAST suites | Sparrow, Checkmarx One, Veracode, Fortify (OpenText), HCL AppScan | Language breadth, compliance reports, on-prem / air-gapped, certification |
+| Developer-first platforms | Snyk, Aikido, Semgrep, SonarQube, GitHub Advanced Security | Developer experience, PR integration, low noise, price |
+| SCA / supply chain | Snyk Open Source, Endor Labs, Socket, Mend, Black Duck, Dependabot | Reachability, malicious-package detection, SBOM, licenses |
+| Secrets | GitGuardian, TruffleHog, GitHub secret scanning | Coverage, validity checks, redaction |
+| IaC / containers | Checkov / Prisma Cloud, Trivy / Aqua, Wiz Code, Snyk IaC / Container | Coverage of the main formats and registries |
+| DAST / API | Burp Suite, Invicti / Acunetix, StackHawk, ZAP | Authenticated scans, API coverage, access-control testing |
 
 **How we get there:**
 - **Complete comes from wrapping.** We don't build engines. Each category is a proven open-source engine,
   pinned and verified, normalized into one `Finding`. A new category is an engine wrapper plus rules,
   tests and a benchmark, not years of engine work.
-- **Best comes from the layer above the engines**, which is where Sparrow and the others are weakest:
+- **Best comes from the layer above the engines**, which is where most of these tools are weak:
   noise cutting (reachability, dev-only, test scope, baseline), proof (public benchmarks), AI triage
   with written reasoning, verified fixes, and linking findings across engines (a DAST hit and the SAST
   finding for the same flaw become one finding marked "confirmed exploitable").
 - **Quality bar per category:** a new engine ships only when it meets the same standard as today:
   pinned, normalized, benchmarked, quiet. A noisy category would undo our main selling point.
 
-Sparrow's weaknesses and our answers:
+Common weaknesses across these tools, and our answers:
 
-| Sparrow's weakness (from research)          | Our answer                                              |
-|---------------------------------------------|---------------------------------------------------------|
-| Vague fix advice, thin finding descriptions | AI triage with written reasoning per finding            |
-| Low recall (49 missed vs 14 found in ACM study) | Public benchmark gate on every change                |
-| Upload-your-code workflow                   | Scans run locally / in the customer's CI; only findings leave |
-| Features split by tier/module, per-user price | One product, every engine, every tier                 |
-| Rationed AI fixes (200/month)               | Verified fix PRs, no quota                               |
-| Few integrations, no public docs            | GitHub-native, SARIF, CLI, MCP, public docs              |
-| SAST and DAST reported separately            | One finding per flaw; DAST-confirmed SAST findings ranked first |
+| Weakness (examples) | Our answer |
+|---|---|
+| Vague fix advice, thin finding descriptions (Sparrow) | AI triage with written reasoning per finding |
+| Low recall (Sparrow: 49 missed vs 14 found in an ACM study); accuracy claimed, not shown | Public benchmark gate on every change |
+| Upload-your-code or repo-access SaaS (most cloud platforms) | Scans run locally / in the customer's CI; only findings leave |
+| Too many findings, little prioritization (most SAST and SCA tools) | Reachability, dev-only, test scope, baseline; one finding per package |
+| Features split by tier/module, per-user price (enterprise suites, GHAS) | One product, every engine, every tier |
+| Rationed AI fixes (Sparrow: 200/month) | Verified fix PRs, no quota |
+| Several tools for one job (SAST + SCA + secrets + DAST from different vendors) | One scan, one finding model, one report |
+| SAST and DAST reported separately | One finding per flaw; DAST-confirmed SAST findings ranked first |
 
-**What Sparrow's core buyers require** (from general knowledge; verify before acting on it): Korean
-public-sector, finance and defense organizations; secure-coding checks against the Korean government
-guideline (행정안전부 소프트웨어 개발보안 가이드); CC-certified analysis tools for public procurement;
-on-premises / air-gapped installs; mostly Java (eGovFrame / Spring) and C/C++. We reach them in three steps:
-1. **Developers first:** win developers inside Sparrow-type organizations with a free tool that's
-   quieter and explains itself (now).
-2. **Acceptable to compliance teams:** Java, guideline mapping in rule metadata, a self-hosted dashboard,
-   reports in the buyer's language, public recall comparisons.
-3. **Certification:** CC, air-gapped installs, C/C++.
+**Buyer groups** (we serve all of them; the order is set by the roadmap):
+1. **Developers and small teams** (Snyk, Aikido, Semgrep, GHAS territory): a free tool that's quieter and
+   explains itself, in CI, the IDE and AI coding agents. Now.
+2. **Security teams at mid-size companies:** dashboard, ownership, SLAs, compliance reports (ISO 27001,
+   SOC 2, EU CRA). Step 5.
+3. **Regulated enterprise and public sector** (Sparrow, Checkmarx, Fortify, Veracode territory): broad
+   language coverage (Java, C#, C/C++), on-prem / air-gapped, reports in the buyer's language, local
+   guidelines (e.g. Korea's 행정안전부 소프트웨어 개발보안 가이드, from general knowledge: verify), and
+   certification such as Common Criteria.
 
-**Open decision:** which market first, Korea (Sparrow's home: guideline mapping, Korean reports and CC
-become requirements) or Sparrow-style buyers elsewhere (Japan, Southeast Asia, EU: CRA / ISO 27001).
+**Open decision:** which country or region to focus sales on first (e.g. Korea, where Sparrow is strongest
+and guideline mapping, Korean reports and CC become requirements; or the US / EU, where the developer-first
+platforms are strongest). The product goal is global either way.
 
 ### Coverage (the "complete" checklist)
 
@@ -186,8 +196,8 @@ AI-BOM and Cosign signing). Each: pinned + verified, normalized into `Finding`, 
   proven by the benchmark (not a rule count).
 - Cross-file taint: first check what Opengrep supports today; then use it, add our own cross-file
   layer, or add a deeper engine for specific languages.
-- Rule metadata gains the Korean secure-coding guideline item (if Korea is the first market),
-  alongside CWE and OWASP.
+- Rule metadata gains local guideline mappings (e.g. the Korean secure-coding guideline item) alongside
+  CWE and OWASP, starting with whichever market we focus on first.
 - AI-app rules, continuing: LLM output → SQL/shell/eval sinks, prompt-injection paths, unsafe model
   loading (pickle / `torch.load`), over-permissioned MCP server configs (started:
   `py-llm-output-to-dangerous-sink`).
@@ -198,10 +208,10 @@ OpenAPI-driven API scanning; authenticated scans (login script or token); the ac
 (log in as several roles, test whether user A can read user B's data — IDOR). **Correlation:** a DAST
 hit and the SAST finding for the same flaw become one finding marked "confirmed exploitable", ranked first.
 
-**Step 5 — Platform.** Self-hostable dashboard (receives findings only; Sparrow-type buyers won't send
+**Step 5 — Platform.** Self-hostable dashboard (receives findings only; regulated buyers won't send
 even findings to a SaaS), ownership (CODEOWNERS, then git blame), fix SLAs, time-to-fix and fix-rate
 views, compliance reports (Korean guideline, ISO 27001, SOC 2, EU CRA) built from findings + baseline
-decisions, VS Code then JetBrains, GitLab, GitHub App, importers for Sparrow / Snyk / SonarQube results.
+decisions, VS Code then JetBrains, GitLab, GitHub App, importers for other tools' results (Sparrow, Checkmarx, Snyk, SonarQube, Semgrep, …) so teams can switch.
 
 **Step 6 — AI layer** across every category:
 - AI triage: per new finding, build context (code slice + taint trace) → model → verdict

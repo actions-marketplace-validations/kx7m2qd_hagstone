@@ -36,6 +36,15 @@ const out = [];
 out.push("## Hagstone security scan", "");
 const verdict = code === "0" ? "✅ Passed" : code === "1" ? "❌ Failed: findings at or above the fail-on level" : `⚠️ Scan error (exit ${code})`;
 out.push(`**${verdict}** · ${results.length} finding${results.length === 1 ? "" : "s"}`, "");
+const b = run.properties?.hagstone;
+if (b && (b.baselined || b.suppressed || b.resurfaced || b.stale)) {
+  const parts = [];
+  if (b.baselined) parts.push(`${b.baselined} baselined`);
+  if (b.suppressed) parts.push(`${b.suppressed} suppressed`);
+  if (b.resurfaced) parts.push(`${b.resurfaced} came back`);
+  if (b.stale) parts.push(`${b.stale} stale baseline entr${b.stale === 1 ? "y" : "ies"} (run \`hagstone baseline prune\`)`);
+  out.push(`Baseline: ${parts.join(" · ")}`, "");
+}
 out.push("| Critical | High | Medium | Low | Info |", "|---|---|---|---|---|");
 out.push(`| ${counts.critical} | ${counts.high} | ${counts.medium} | ${counts.low} | ${counts.info} |`, "");
 

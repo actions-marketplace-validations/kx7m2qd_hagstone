@@ -77,6 +77,10 @@ export interface Finding {
   dataflow?: DataflowStep[];
   /** Set when the file is test or example code (see src/core/scope.ts); absent for shipped code. */
   scope?: "test" | "example";
+  /** Set on findings a baseline entry hides (src/core/baseline.ts); they are not in `findings`. */
+  suppression?: { kind: "baseline" | "false-positive" | "accepted-risk"; reason?: string; date: string; expires?: string };
+  /** Why a finding a baseline entry matched is reported again (expired, new advisory, got worse). */
+  resurfaced?: string;
 }
 
 export function fingerprint(...parts: string[]): string {

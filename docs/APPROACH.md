@@ -80,7 +80,7 @@ platforms are strongest). The product goal is global either way.
 | Access-control testing (multi-role IDOR) | ❌ | ours |
 | Mobile (APK/IPA) | ❌ | MobSF is GPL-3: needs a licensing decision |
 | IDE (VS Code, JetBrains) | ❌ | ours |
-| Baseline / suppressions | ❌ (next) | ours |
+| Baseline / suppressions | ✅ | ours |
 | AI triage, triage memory, verified fixes | ❌ | ours |
 | Dashboard, ownership, SLAs (self-hostable) | ❌ | ours |
 | Compliance reports (Korean guideline, ISO 27001, SOC 2, EU CRA) | ❌ | ours |
@@ -152,7 +152,7 @@ npm releases with provenance.
 ### Path to the complete platform (agreed 2026-11-18)
 Breadth first, through wrapping, without lowering the quality bar. Each step adds whole categories.
 
-**Step 1 — Baseline + suppressions** (next). Every new engine adds findings, so teams need a way to
+**Step 1 — Baseline + suppressions** ✓ built 2026-11-19 (spec `docs/specs/baseline.md`). Every new engine adds findings, so teams need a way to
 accept what exists before we add more.
 
 Design (agreed 2026-11-18): one committed file (`.hagstone/baseline.json`) holding

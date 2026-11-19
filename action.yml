@@ -120,6 +120,21 @@ runs:
             echo "::warning file=${prefix}.hagstoneignore::This pull request changes .hagstoneignore. Hagstone used the base branch's version; the change takes effect after merge."
           fi
           args+=(--ignore-file "$ignore_file")
+
+          # Same for the baseline: a PR must not be able to hide the findings it adds.
+          base_baseline="$RUNNER_TEMP/hagstone-base-baseline.json"
+          if git -C "$IN_PATH" show "$BASE_SHA:${prefix}.hagstone/baseline.json" > "$base_baseline" 2>/dev/null; then
+            args+=(--baseline "$base_baseline")
+          else
+            : > "$base_baseline"
+            args+=(--no-baseline)
+          fi
+          head_baseline="$IN_PATH/.hagstone/baseline.json"
+          if [ -f "$head_baseline" ] || [ -s "$base_baseline" ]; then
+            if ! cmp -s "$base_baseline" "$head_baseline" 2>/dev/null; then
+              echo "::warning file=${prefix}.hagstone/baseline.json::This pull request changes the Hagstone baseline. The check used the base branch's version; the change takes effect after merge."
+            fi
+          fi
         fi
 
         [ "$IN_TRUST" = "true" ] && args+=(--trust-reachability)

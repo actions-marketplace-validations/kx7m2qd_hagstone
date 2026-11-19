@@ -59,6 +59,20 @@ export function toSarif(result: ScanResult): object {
             })),
           },
         },
+        // Findings the baseline hides are left out entirely (GitHub doesn't document SARIF
+        // `suppressions`), so their alerts close; the counts go here for the job summary.
+        ...(result.baseline
+          ? {
+              properties: {
+                hagstone: {
+                  baselined: result.baseline.baselined,
+                  suppressed: result.baseline.suppressed,
+                  resurfaced: result.baseline.resurfaced,
+                  ...(result.baseline.stale ? { stale: result.baseline.stale.length } : {}),
+                },
+              },
+            }
+          : {}),
         results: result.findings.map((f) => ({
           ruleId: ruleKey(f),
           ruleIndex: ruleIndex.get(ruleKey(f)),
@@ -80,6 +94,7 @@ export function toSarif(result: ScanResult): object {
           // Findings sharing a rule can differ in severity (reachability lowers it per finding).
           properties: {
             severity: f.severity,
+            ...(f.resurfaced ? { resurfaced: f.resurfaced } : {}),
             ...(f.reachability
               ? {
                   reachability: f.reachability.status,

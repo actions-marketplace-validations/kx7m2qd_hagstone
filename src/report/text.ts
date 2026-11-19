@@ -38,6 +38,7 @@ export function toText(result: ScanResult, opts: { color: boolean }): string {
       const was = r.originalSeverity ? c(DIM, ` (was ${r.originalSeverity})`) : "";
       lines.push(`         ${c(DIM, "reach:")} ${tag}${was}  ${c(DIM, safe(r.reason).slice(0, 200))}`);
     }
+    if (f.resurfaced) lines.push(`         ${c(COLOR.medium, "back:")} ${safe(f.resurfaced).slice(0, 200)}`);
     lines.push(`         ${safe(f.message).split("\n")[0]?.slice(0, 240)}`);
     lines.push("");
   }
@@ -65,6 +66,12 @@ export function toText(result: ScanResult, opts: { color: boolean }): string {
   );
   if (result.hiddenInTests)
     lines.push(c(DIM, `${result.hiddenInTests} finding${result.hiddenInTests === 1 ? "" : "s"} in test or example code not shown (--include-tests to show)`));
+  const b = result.baseline;
+  if (b && (b.baselined || b.suppressed)) {
+    const parts = [b.baselined ? `${b.baselined} baselined` : "", b.suppressed ? `${b.suppressed} suppressed (false positive / accepted risk)` : ""].filter(Boolean);
+    lines.push(c(DIM, `${parts.join(", ")} not shown, from ${safe(b.file)} (--no-baseline to show)`));
+  }
+  if (b?.resurfaced) lines.push(c(COLOR.medium, `${b.resurfaced} finding${b.resurfaced === 1 ? "" : "s"} from ${safe(b.file)} came back (expired, new advisory, or got worse)`));
   if (result.ignores.length) lines.push(c(DIM, `excluded by .hagstoneignore: ${safe(result.ignores.join(", ")).slice(0, 300)}`));
   for (const w of result.warnings) lines.push(c(COLOR.medium, `warning: ${safe(w)}`));
   return lines.join("\n");

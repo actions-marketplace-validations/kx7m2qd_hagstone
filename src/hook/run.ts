@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
+import { defaultBaselinePath } from "../core/baseline.js";
 import { severityAtLeast, type Finding, type Severity } from "../core/finding.js";
 import { toText } from "../report/text.js";
 import { scan } from "../scan.js";
@@ -75,7 +76,13 @@ export async function hookRun(opts: {
     if ((await materialize(root, dest, staged)) === 0) return { code: 0, output: "" };
 
     const added = addedLines(await stagedDiff(root));
-    const result = await scan(dest, { engines: ["opengrep", "gitleaks"], autoInstall: false });
+    // The working tree's baseline applies (staged files only cover part of the repo: no staleness).
+    const result = await scan(dest, {
+      engines: ["opengrep", "gitleaks"],
+      autoInstall: false,
+      baseline: defaultBaselinePath(root),
+      partial: true,
+    });
 
     const failed = result.engines.find((e) => !e.ok);
     if (failed) {

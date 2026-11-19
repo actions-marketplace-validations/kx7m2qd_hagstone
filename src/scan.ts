@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
+import { applyBaseline, BASELINE_FILE, defaultBaselinePath, loadBaseline, today, type BaselineSummary } from "./core/baseline.js";
 import { dedupe, sortFindings, type EngineName, type Finding } from "./core/finding.js";
 import { DEFAULT_IGNORES, isIgnored, loadIgnorePatterns } from "./core/ignore.js";
 import { pathScope } from "./core/scope.js";
@@ -26,6 +27,15 @@ export interface ScanOptions {
   ignoreFile?: string;
   /** Report code and dependency findings in test and example paths too (default: hidden and counted). */
   includeTests?: boolean;
+  /** Baseline file to apply instead of `<root>/.hagstone/baseline.json` (missing file → none). */
+  baseline?: string;
+  /** Don't apply any baseline: report every finding. */
+  noBaseline?: boolean;
+  /**
+   * The scan doesn't cover the whole tree (pre-commit hook, MCP `paths`), so baseline entries that
+   * match nothing can't be called stale.
+   */
+  partial?: boolean;
 }
 
 export interface EngineStatus {
@@ -48,6 +58,10 @@ export interface ScanResult {
   engines: EngineStatus[];
   /** Findings left out because they are in test or example code (see `includeTests`). */
   hiddenInTests?: number;
+  /** Findings a baseline entry hides, each with `suppression` set. Not in `findings`, not gated. */
+  suppressed?: Finding[];
+  /** Present when a baseline file was applied. */
+  baseline?: BaselineSummary;
 }
 
 /**
@@ -116,7 +130,8 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
     if (where !== "prod") f.scope = where;
   }
   const visible = opts.includeTests ? kept : kept.filter((f) => !hiddenByScope(f));
-  const hiddenInTests = kept.length - visible.length;
+  const hiddenScope = opts.includeTests ? [] : kept.filter((f) => hiddenByScope(f));
+  const hiddenInTests = hiddenScope.length;
   kept = visible;
   if (opts.reachability ?? true) {
     try {
@@ -125,8 +140,39 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
       // Reachability only refines findings; a failure must never drop or block them.
       warnings.push(`reachability analysis failed: ${e instanceof Error ? e.message : String(e)}`);
     }
-    if (opts.reachableOnly) kept = kept.filter((f) => f.reachability?.status !== "unreachable");
   }
+
+  let suppressed: Finding[] | undefined;
+  let baseline: BaselineSummary | undefined;
+  if (!opts.noBaseline) {
+    const path = opts.baseline ? resolve(opts.baseline) : defaultBaselinePath(root);
+    const rel = relative(root, path);
+    const shown = !opts.baseline ? BASELINE_FILE : rel && !rel.startsWith("..") ? rel : path;
+    const { file, error } = await loadBaseline(path);
+    if (error) warnings.push(`baseline ${shown} not applied (${error}), so every finding is shown`);
+    else if (file) {
+      const a = applyBaseline(kept, hiddenScope, file, today());
+      kept = a.active;
+      suppressed = sortFindings(a.suppressed);
+      // Staleness needs every engine to have looked at the whole tree.
+      const full = !opts.partial && ALL_ENGINES.every((e) => engines.includes(e)) && statuses.every((s) => s.ok);
+      const stale = full
+        ? a.unmatchedEntries.map((e) => ({ id: e.id, kind: e.kind, ruleId: e.ruleId, path: e.path }))
+        : undefined;
+      baseline = {
+        file: shown,
+        baselined: a.suppressed.filter((f) => f.suppression?.kind === "baseline").length,
+        suppressed: a.suppressed.filter((f) => f.suppression?.kind !== "baseline").length,
+        resurfaced: a.resurfaced,
+        ...(stale ? { stale } : {}),
+      };
+      if (stale?.length)
+        warnings.push(
+          `${shown}: ${stale.length} entr${stale.length === 1 ? "y matches" : "ies match"} no finding (fixed, or the code changed); run \`hagstone baseline prune\``,
+        );
+    }
+  }
+  if (opts.reachableOnly) kept = kept.filter((f) => f.reachability?.status !== "unreachable");
 
   return {
     root,
@@ -135,5 +181,7 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
     warnings,
     engines: statuses,
     hiddenInTests,
+    ...(suppressed ? { suppressed } : {}),
+    ...(baseline ? { baseline } : {}),
   };
 }

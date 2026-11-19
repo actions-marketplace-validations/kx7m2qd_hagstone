@@ -2,6 +2,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { itemsFromSarif, report } from "./action/github.js";
+import { baselineCreate, baselinePrune, suppress, type CommandResult } from "./commands/baseline.js";
 import { gateSeverity, SEVERITY_ORDER, severityAtLeast, type EngineName, type Severity } from "./core/finding.js";
 import { enginePath, installEngine, isInstalled, resolveEngine } from "./engines/install.js";
 import { BINARY_ENGINES, ENGINES } from "./engines/manifest.js";
@@ -39,10 +40,26 @@ Usage:
                                    Hidden by default; secrets and malicious packages are always shown.
       --ignore-file <file>         Read ignore patterns from this file instead of <path>/.hagstoneignore
                                    (CI: pass the base branch's copy so a PR can't un-scan its own code)
+      --baseline <file>            Apply this baseline instead of <path>/.hagstone/baseline.json
+                                   (CI: pass the base branch's copy so a PR can't hide its own findings)
+      --no-baseline                Ignore the baseline: report and gate on every finding
 
   pkgrisk (dependency supply-chain checks) sends package names and versions, nothing else, to
   registry.npmjs.org and pypi.org (osv-scanner already sends the same to osv.dev). Source code, file
   paths and manifest contents never leave your machine. Use --offline to send nothing.
+
+  ${TOOL_NAME} baseline create [path] [--force]
+                                    Snapshot every current finding into .hagstone/baseline.json (commit
+                                    it). After that, only new findings, or old ones that got worse, are
+                                    reported and fail --fail-on. Secrets and malicious packages are
+                                    never baselined. --force re-snapshots and keeps your decisions.
+  ${TOOL_NAME} suppress <id|path:line> --as false-positive|accepted-risk --reason "…"
+                   [--expires YYYY-MM-DD] [--path <path>]
+                                    Record a decision about one finding. accepted-risk expires (default
+                                    90 days), then the finding fails the gate again. Secrets can only be
+                                    marked false-positive; malicious packages can't be suppressed.
+  ${TOOL_NAME} baseline prune [path]   Remove entries for findings that are gone (fixed), and re-attach
+                                    entries whose code moved or whose fingerprint changed.
 
   ${TOOL_NAME} engines install      Download and verify the pinned engine binaries
   ${TOOL_NAME} engines status       Show which engines are installed
@@ -100,6 +117,8 @@ async function cmdScan(args: string[]): Promise<number> {
       "trust-reachability": { type: "boolean", default: false },
       "ignore-file": { type: "string" },
       "include-tests": { type: "boolean", default: false },
+      baseline: { type: "string" },
+      "no-baseline": { type: "boolean", default: false },
     },
   });
   const format = values.format;
@@ -115,6 +134,8 @@ async function cmdScan(args: string[]): Promise<number> {
     reachableOnly: values["reachable-only"],
     ignoreFile: values["ignore-file"],
     includeTests: values["include-tests"],
+    baseline: values.baseline,
+    noBaseline: values["no-baseline"],
   });
 
   const report =
@@ -131,11 +152,51 @@ async function cmdScan(args: string[]): Promise<number> {
     await writeStdout(report + "\n");
   }
   if (format !== "text") for (const w of result.warnings) process.stderr.write(`warning: ${w}\n`);
+  // In GitHub Actions, stale baseline entries become an annotation; they never fail the job.
+  const stale = result.baseline?.stale?.length;
+  if (stale && process.env.GITHUB_ACTIONS === "true")
+    process.stdout.write(`::warning file=${result.baseline!.file}::${stale} baseline entr${stale === 1 ? "y matches" : "ies match"} no finding (fixed, or the code changed). Run \`${TOOL_NAME} baseline prune\` and commit the result.\n`);
 
   if (result.engines.some((e) => !e.ok)) return 2;
   const trust = values["trust-reachability"];
   if (failOn !== "none" && result.findings.some((f) => severityAtLeast(gateSeverity(f, trust), failOn as Severity))) return 1;
   return 0;
+}
+
+function done(res: CommandResult): number {
+  (res.code === 0 ? process.stdout : process.stderr).write(`${res.code === 0 ? "" : `${TOOL_NAME}: `}${res.message}\n`);
+  return res.code;
+}
+
+const commandDeps = { scan, version: TOOL_VERSION };
+
+async function cmdBaseline(args: string[]): Promise<number> {
+  const [sub, ...rest] = args;
+  if (sub === "create") {
+    const { values, positionals } = parseArgs({ args: rest, allowPositionals: true, options: { force: { type: "boolean", default: false } } });
+    return done(await baselineCreate(positionals[0] ?? ".", { force: values.force }, commandDeps));
+  }
+  if (sub === "prune") {
+    const { positionals } = parseArgs({ args: rest, allowPositionals: true, options: {} });
+    return done(await baselinePrune(positionals[0] ?? ".", commandDeps));
+  }
+  fail(`usage: ${TOOL_NAME} baseline create|prune [path]`);
+}
+
+async function cmdSuppress(args: string[]): Promise<number> {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      as: { type: "string" },
+      reason: { type: "string" },
+      expires: { type: "string" },
+      path: { type: "string", default: "." },
+    },
+  });
+  if (positionals.length !== 1 || !values.as)
+    fail(`usage: ${TOOL_NAME} suppress <id|path:line> --as false-positive|accepted-risk --reason "…" [--expires YYYY-MM-DD] [--path <path>]`);
+  return done(await suppress(positionals[0]!, { root: values.path, kind: values.as, reason: values.reason, expires: values.expires }, commandDeps));
 }
 
 async function cmdEngines(args: string[]): Promise<number> {
@@ -254,6 +315,10 @@ async function main(argv: string[]): Promise<number> {
       return cmdScan(rest);
     case "engines":
       return cmdEngines(rest);
+    case "baseline":
+      return cmdBaseline(rest);
+    case "suppress":
+      return cmdSuppress(rest);
     case "hook":
       return cmdHook(rest);
     case "mcp":

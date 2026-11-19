@@ -5,6 +5,7 @@
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { BASELINE_FILE, defaultBaselinePath } from "../core/baseline.js";
 import { SEVERITY_ORDER, sortFindings, type EngineName, type Finding } from "../core/finding.js";
 import { isIgnored, loadIgnorePatterns } from "../core/ignore.js";
 import { assessRefs, type PkgriskOptions } from "../engines/pkgrisk/index.js";
@@ -74,6 +75,7 @@ export function brief(f: Finding): Record<string, unknown> {
     location: where(f),
     ...(f.dependency ? { package: `${f.dependency.name}@${f.dependency.version} (${f.dependency.ecosystem})` } : {}),
     ...(f.reachability ? { reachability: f.reachability.status } : {}),
+    ...(f.resurfaced ? { resurfaced: f.resurfaced } : {}),
   };
 }
 
@@ -98,6 +100,7 @@ export function detail(f: Finding): Record<string, unknown> {
     cwe: f.cwe.map((c) => ({ id: c, ...(cweLink(c) ? { url: cweLink(c) } : {}) })),
     owasp: f.owasp,
     ...(f.dependency ? { dependency: f.dependency } : {}),
+    ...(f.resurfaced ? { resurfaced: f.resurfaced } : {}),
     ...(f.reachability ? { reachability: f.reachability } : {}),
     ...(f.dataflow?.length ? { dataflow: f.dataflow.map(({ path, line }) => ({ path, line })) } : {}),
   };
@@ -244,7 +247,14 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
           files = copied;
           if (skipped.length) notes.push(`skipped: ${skipped.join(", ")}`);
           if (copied.length && codeEngines.length) {
-            const r = await runScan(dest, { engines: codeEngines, reachability: false, ignoreFile: join(root, ".hagstoneignore"), includeTests });
+            const r = await runScan(dest, {
+              engines: codeEngines,
+              reachability: false,
+              ignoreFile: join(root, ".hagstoneignore"),
+              includeTests,
+              baseline: defaultBaselinePath(root),
+              partial: true,
+            });
             const fix = (s: string) => s.split(dest).join(root);
             parts.push({ ...r, warnings: r.warnings.map(fix), engines: r.engines.map((e) => (e.error ? { ...e, error: fix(e.error) } : e)) });
           }
@@ -274,6 +284,16 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
           warnings: parts.flatMap((p) => p.warnings),
           engines: parts.flatMap((p) => p.engines),
           hiddenInTests: parts.reduce((n, p) => n + (p.hiddenInTests ?? 0), 0),
+          ...(parts.some((p) => p.baseline)
+            ? {
+                baseline: {
+                  file: BASELINE_FILE,
+                  baselined: parts.reduce((n, p) => n + (p.baseline?.baselined ?? 0), 0),
+                  suppressed: parts.reduce((n, p) => n + (p.baseline?.suppressed ?? 0), 0),
+                  resurfaced: parts.reduce((n, p) => n + (p.baseline?.resurfaced ?? 0), 0),
+                },
+              }
+            : {}),
         };
       }
 
@@ -291,6 +311,9 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
         ...(failed.length ? { engine_errors: failed } : {}),
         ...(result.warnings.length || notes.length ? { warnings: [...notes, ...result.warnings] } : {}),
         ...(result.hiddenInTests ? { hidden_in_tests: result.hiddenInTests } : {}),
+        // Read-only: counts only. Agents can't change the baseline; a person runs `hagstone suppress`.
+        ...(result.baseline?.baselined ? { baselined: result.baseline.baselined } : {}),
+        ...(result.baseline?.suppressed ? { suppressed: result.baseline.suppressed } : {}),
         ...(result.findings.length > shown.length
           ? { hint: `${result.findings.length - shown.length} more not shown. Raise \`limit\`, or narrow with \`paths\`.` }
           : {}),

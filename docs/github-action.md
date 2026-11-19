@@ -49,5 +49,11 @@ Outputs: `exit-code` (0 clean, 1 findings at/above `fail-on`, 2 scan error) and 
 - Paths in `.hagstoneignore` at the scan root are skipped. On pull requests the **base branch's**
   `.hagstoneignore` is used, so a PR can't exclude the code it adds; a PR that edits it gets a warning,
   and the change applies after merge.
+- `.hagstone/baseline.json` (from `hagstone baseline create` / `hagstone suppress`) works the same way:
+  on pull requests the **base branch's** copy is used, so a PR can't hide the findings it adds. A PR
+  that changes it gets a warning, and the change applies after merge; to adopt Hagstone on a repo with
+  existing findings, merge the baseline in its own PR first. Stale entries (fixed findings) are a
+  warning annotation, never a failure. Baselined findings are left out of the SARIF upload, so their
+  code scanning alerts close; the job summary shows the counts.
 - `@v0` follows the latest 0.x release. For a fixed, auditable version, pin a full commit SHA
   (`kx7m2qd/hagstone@<sha> # v0.2.0`). Avoid `@main`: it changes with every push.

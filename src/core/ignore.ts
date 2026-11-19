@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 /** Always skipped, regardless of .hagstoneignore / .vigilignore. */
-export const DEFAULT_IGNORES = ["node_modules/", ".git/", "dist/", "build/", "vendor/", ".venv/", "venv/", "__pycache__/"];
+export const DEFAULT_IGNORES = ["node_modules/", ".git/", "dist/", "build/", "vendor/", ".venv/", "venv/", "__pycache__/", ".hagstone/"];
 
 /**
  * Load .hagstoneignore from the scan root, or from `file` when given (CI passes the base branch's copy,

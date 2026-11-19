@@ -46,6 +46,22 @@ Add it to Claude Code as an MCP server:
 claude mcp add hagstone -- npx -y hagstone mcp
 ```
 
+### Adopting on an existing project
+
+```sh
+hagstone baseline create             # snapshot today's findings into .hagstone/baseline.json; commit it
+hagstone scan                        # from now on: only new findings, or old ones that got worse
+hagstone suppress <id|path:line> --as false-positive --reason "escaped by the template engine"
+hagstone suppress <id|path:line> --as accepted-risk --reason "internal tool" [--expires 2027-03-01]
+hagstone baseline prune              # drop entries for fixed findings; re-attach moved code
+```
+
+A baselined finding comes back if it gets worse: a new advisory for the same package version, a
+higher severity, a package that becomes reachable, or an `accepted-risk` past its expiry (90 days by
+default). Secrets can only be marked `false-positive` (rotate real ones), and known-malicious packages
+can't be suppressed. There are no inline "ignore" comments: decisions live in one reviewed file.
+`--no-baseline` shows everything.
+
 Skip paths with a `.hagstoneignore` file at the scan root: one entry per line, either a path prefix
 (`test/fixtures/`) or a bare name that matches at any depth (`fixtures`). `node_modules/`, `dist/`,
 `vendor/` and similar directories are always skipped.

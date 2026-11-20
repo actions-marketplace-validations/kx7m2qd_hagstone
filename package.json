@@ -30,6 +30,7 @@
     "dist",
     "rules/**/*.yml",
     "config/*.toml",
+    "config/*.json",
     "data",
     "SECURITY.md"
   ],

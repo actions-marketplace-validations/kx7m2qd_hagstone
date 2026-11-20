@@ -20,11 +20,13 @@ Only the latest release and `main` get security fixes while Hagstone is pre-1.0.
 Hagstone reads untrusted repositories, so these are the things we treat as vulnerabilities:
 
 - Running code from a scanned repo, or letting it change what Hagstone executes
+- A scanned repo making an engine fetch something over the network (e.g. a remote Terraform module)
 - A raw secret value appearing in a finding, report, log, or anything sent off the machine
 - Source code leaving the machine (only package names/versions go to registries and osv.dev;
   `--offline` sends nothing)
 - Installing or running an engine binary that doesn't match its pinned SHA-256
-- A scanned repo hiding findings from CI in a way the report doesn't surface
+- A scanned repo hiding findings from CI in a way the report doesn't surface (including an engine's
+  own inline-ignore comments or config files, such as `trivy:ignore` or `trivy.yaml`)
 - Terminal escape or injection through finding text, or injection through GitHub Action inputs
 
 Missed detections and false positives are bugs, not vulnerabilities. Open a normal issue for those.

@@ -20,7 +20,7 @@ import { TOOL_NAME, TOOL_VERSION } from "./version.js";
 const HELP = `${TOOL_NAME} ${TOOL_VERSION} — local-first application security scanner
 
 Usage:
-  ${TOOL_NAME} scan [path]          Scan code, dependencies and secrets (default path: .)
+  ${TOOL_NAME} scan [path]          Scan code, dependencies, secrets and IaC (default path: .)
       --format text|json|sarif     Output format (default: text)
       --output <file>              Write the report to a file instead of stdout
       --fail-on <severity|none>    Exit 1 if a finding is at least this severe (default: high)
@@ -38,6 +38,8 @@ Usage:
       --include-tests              Also report code and dependency findings in test and example code
                                    (test/, __tests__/, e2e/, examples/, *.spec.ts, test_*.py, ...).
                                    Hidden by default; secrets and malicious packages are always shown.
+      --include-hardening          Also report IaC hardening checks (Trivy LOW and best-practice checks
+                                   that expose nothing on their own). Hidden and counted by default.
       --ignore-file <file>         Read ignore patterns from this file instead of <path>/.hagstoneignore
                                    (CI: pass the base branch's copy so a PR can't un-scan its own code)
       --baseline <file>            Apply this baseline instead of <path>/.hagstone/baseline.json
@@ -117,6 +119,7 @@ async function cmdScan(args: string[]): Promise<number> {
       "trust-reachability": { type: "boolean", default: false },
       "ignore-file": { type: "string" },
       "include-tests": { type: "boolean", default: false },
+      "include-hardening": { type: "boolean", default: false },
       baseline: { type: "string" },
       "no-baseline": { type: "boolean", default: false },
     },
@@ -134,6 +137,7 @@ async function cmdScan(args: string[]): Promise<number> {
     reachableOnly: values["reachable-only"],
     ignoreFile: values["ignore-file"],
     includeTests: values["include-tests"],
+    includeHardening: values["include-hardening"],
     baseline: values.baseline,
     noBaseline: values["no-baseline"],
   });

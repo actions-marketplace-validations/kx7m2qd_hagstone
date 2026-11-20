@@ -1,8 +1,8 @@
 import { createHash, scryptSync } from "node:crypto";
 
 export type Severity = "critical" | "high" | "medium" | "low" | "info";
-export type Category = "code" | "dependency" | "secret";
-export type EngineName = "opengrep" | "osv-scanner" | "gitleaks" | "pkgrisk";
+export type Category = "code" | "dependency" | "secret" | "iac" | "license";
+export type EngineName = "opengrep" | "osv-scanner" | "gitleaks" | "pkgrisk" | "trivy" | "syft" | "grype";
 
 /** Rule id shared by every known-vulnerable dependency finding (one finding per package version). */
 export const VULNERABLE_DEPENDENCY = "vulnerable-dependency";

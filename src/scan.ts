@@ -9,10 +9,11 @@ import type { BinaryEngine } from "./engines/manifest.js";
 import { runOpengrep } from "./engines/opengrep.js";
 import { runOsv } from "./engines/osv.js";
 import { runPkgrisk } from "./engines/pkgrisk/index.js";
+import { runTrivy } from "./engines/trivy.js";
 import type { EngineOutput } from "./engines/types.js";
 import { applyReachability } from "./reachability/index.js";
 
-export const ALL_ENGINES: EngineName[] = ["opengrep", "osv-scanner", "gitleaks", "pkgrisk"];
+export const ALL_ENGINES: EngineName[] = ["opengrep", "osv-scanner", "gitleaks", "pkgrisk", "trivy"];
 
 export interface ScanOptions {
   engines?: EngineName[];
@@ -27,6 +28,8 @@ export interface ScanOptions {
   ignoreFile?: string;
   /** Report code and dependency findings in test and example paths too (default: hidden and counted). */
   includeTests?: boolean;
+  /** Report IaC hardening checks too (LOW and config/iac-hardening.json; default: hidden and counted). */
+  includeHardening?: boolean;
   /** Baseline file to apply instead of `<root>/.hagstone/baseline.json` (missing file → none). */
   baseline?: string;
   /** Don't apply any baseline: report every finding. */
@@ -71,7 +74,7 @@ export interface ScanResult {
  */
 export function hiddenByScope(f: Finding): boolean {
   if (!f.scope) return false;
-  if (f.category === "code") return true;
+  if (f.category === "code" || f.category === "iac") return true;
   return f.category === "dependency" && f.engine === "osv-scanner" && f.ruleId !== "pkg-known-malicious";
 }
 
@@ -81,10 +84,17 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
   const engines = opts.engines ?? ALL_ENGINES;
   const autoInstall = opts.autoInstall ?? true;
 
-  const runners: Record<BinaryEngine, (bin: string) => Promise<EngineOutput>> = {
+  const runners: Partial<Record<BinaryEngine, (bin: string) => Promise<EngineOutput>>> = {
     opengrep: (bin) => runOpengrep(bin, root, ignores),
     "osv-scanner": (bin) => runOsv(bin, root),
     gitleaks: (bin) => runGitleaks(bin, root),
+    trivy: (bin) => runTrivy(bin, root, ignores, { includeHardening: opts.includeHardening ?? false }),
+  };
+
+  const runnerFor = (engine: BinaryEngine) => {
+    const r = runners[engine];
+    if (!r) throw new Error(`${engine} doesn't scan a directory`);
+    return r;
   };
 
   // Engines run in parallel; one failing engine must not hide the others' results.
@@ -96,7 +106,7 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
         const out =
           engine === "pkgrisk"
             ? await runPkgrisk(root, ignores, { offline: opts.offline ?? false })
-            : await runners[engine](await resolveEngine(engine, { autoInstall }));
+            : await runnerFor(engine)(await resolveEngine(engine, { autoInstall }));
         return { engine, out, ms: Date.now() - started };
       } catch (e) {
         return { engine, error: e instanceof Error ? e.message : String(e), ms: Date.now() - started };

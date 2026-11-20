@@ -1,7 +1,7 @@
 # Hagstone
 
-Local-first application security scanner. One command runs SAST, dependency vulnerability, secret and
-supply-chain checks, and reports everything as a single list of findings.
+Local-first application security scanner. One command runs SAST, dependency vulnerability, secret,
+supply-chain and infrastructure-as-code checks, and reports everything as a single list of findings.
 
 Your source code never leaves your machine or CI runner. The supply-chain checks send package names
 and versions to npm and PyPI and nothing else, and `--offline` turns those lookups off too.
@@ -13,6 +13,12 @@ and versions to npm and PyPI and nothing else, and `--offline` turns those looku
 - **Secrets:** [Gitleaks](https://github.com/gitleaks/gitleaks). Secret values are redacted from every
   report.
 - **Supply chain:** typosquats, install scripts, known-malicious packages.
+- **Infrastructure as code:** Terraform, Kubernetes, Dockerfile, Helm, CloudFormation, ARM and Ansible
+  via [Trivy](https://github.com/aquasecurity/trivy)'s built-in checks. Only things that expose
+  something are reported (a public bucket, SSH open to the internet, a privileged container); the
+  best-practice hardening checks are counted, and `--include-hardening` shows them. Inline
+  `trivy:ignore` comments in the scanned repo are not honoured, and remote Terraform modules are
+  never downloaded.
 
 Engine binaries are pinned by version and SHA-256, and Hagstone checks them on every run.
 

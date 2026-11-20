@@ -1,0 +1,20 @@
+{
+  "_doc": "Trivy checks Hagstone hides by default (shown with --include-hardening): best-practice gaps that don't expose anything on their own. Every LOW check is hidden too. Each entry says why. A change must keep the IaC bench gate. See docs/specs/iac-containers-sbom.md.",
+  "hardening": {
+    "AWS-0077": "Backup retention is resilience, not exposure",
+    "AWS-0086": "Missing S3 public access block: AWS blocks public access by default since April 2023; AWS-0092 reports a bucket that is actually public",
+    "AWS-0087": "Missing S3 public access block (see AWS-0086)",
+    "AWS-0090": "S3 versioning protects against accidental deletes; its absence exposes nothing",
+    "AWS-0091": "Missing S3 public access block (see AWS-0086)",
+    "AWS-0093": "Missing S3 public access block (see AWS-0086)",
+    "AWS-0132": "Customer-managed KMS key instead of the AWS-managed one; data is encrypted either way",
+    "AWS-0176": "IAM database authentication is an alternative to passwords, not a fix for an exposure",
+    "AWS-0177": "Deletion protection is resilience, not exposure",
+    "KSV-0001": "allowPrivilegeEscalation is defense in depth; KSV-0017 reports privileged containers",
+    "KSV-0013": "Image tag :latest is a reproducibility issue, not an exposure",
+    "KSV-0014": "Read-only root filesystem is defense in depth",
+    "KSV-0104": "Seccomp profile is defense in depth",
+    "KSV-0118": "Fires on any pod without an explicit securityContext; the specific checks (privileged, root, host access) carry the signal",
+    "KSV-0125": "Trusted-registry allow-list is an organisation policy; Trivy's default list flags every private registry"
+  }
+}

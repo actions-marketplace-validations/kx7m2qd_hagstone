@@ -19,7 +19,7 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 /** Bigger files are skipped in changed/paths scans: generated or minified, slow for Opengrep. */
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
-const CODE_ENGINES: EngineName[] = ["opengrep", "gitleaks"];
+const CODE_ENGINES: EngineName[] = ["opengrep", "gitleaks", "trivy"];
 const DEP_ENGINES: EngineName[] = ["osv-scanner", "pkgrisk"];
 const MANIFEST =
   /^(package\.json|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|requirements[^/]*\.txt|pyproject\.toml|Pipfile(\.lock)?|poetry\.lock|uv\.lock|setup\.py|setup\.cfg)$/;
@@ -168,7 +168,7 @@ export function createTools(rootArg: string, deps: ToolDeps = {}): Tool[] {
     title: "Hagstone security scan",
     description:
       "Scan the project for security problems: vulnerable code patterns (injection, XSS, SSRF, unsafe deserialization, ...), " +
-      "hardcoded secrets, and risky or vulnerable npm/PyPI dependencies. By default only files changed since the last commit " +
+      "hardcoded secrets, infrastructure-as-code misconfigurations (Terraform, Kubernetes, Dockerfile, Helm), and risky or vulnerable npm/PyPI dependencies. By default only files changed since the last commit " +
       "(plus untracked files) are scanned — call it after editing code. Use scope \"all\" for the whole project, or `paths` for " +
       "specific files. Returns a short list sorted by severity; call `explain` with a finding's id for details and how to fix it.",
     inputSchema: {

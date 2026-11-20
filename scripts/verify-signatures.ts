@@ -83,6 +83,9 @@ async function verifyEngine(name: BinaryEngine, dir: string): Promise<void> {
       const bundle = await fetchTo(p.bundle, dir, `${name}-checksums.sigstore.json`);
       const r = tool("cosign", ["verify-blob", `--bundle=${bundle.path}`, ...certFlags(p.identity, p.commit), sums.path]);
       if (!r.ok) return fail(name, `checksums signature did not verify: ${r.out}`);
+      // Canary: the same check with a wrong commit must fail, or the identity pinning isn't doing anything.
+      const wrong = tool("cosign", ["verify-blob", `--bundle=${bundle.path}`, ...certFlags(p.identity, "0".repeat(40)), sums.path]);
+      if (wrong.ok) return fail(name, "cosign accepted the signature for a different commit: identity pinning is not enforced");
       listedIn(sums.bytes.toString("utf8"));
       return done(`checksums file signed by ${p.identity} at ${p.commit.slice(0, 7)}; pinned hashes listed`);
     }

@@ -1,4 +1,5 @@
-import { join, relative, resolve } from "node:path";
+import { readFile } from "node:fs/promises";
+import { join, relative, resolve, sep } from "node:path";
 import { applyBaseline, BASELINE_FILE, defaultBaselinePath, loadBaseline, today, type BaselineSummary } from "./core/baseline.js";
 import { dedupe, sortFindings, type EngineName, type Finding } from "./core/finding.js";
 import { DEFAULT_IGNORES, isIgnored, loadIgnorePatterns } from "./core/ignore.js";
@@ -214,6 +215,31 @@ export interface ImageScanOptions {
   offline?: boolean;
   /** Baseline to apply (an image has no repo root, so there is no default one). */
   baseline?: string;
+  /**
+   * The Dockerfile that builds the image. Findings then point at its final FROM line (where a base
+   * image is upgraded), so code scanning, check runs and PR comments get a real repo file; the path
+   * inside the image stays in the message.
+   */
+  dockerfile?: string;
+}
+
+/** 1-based line of the last FROM instruction (the stage that becomes the image); 1 if there is none. Pure. */
+export function finalFromLine(dockerfile: string): number {
+  let line = 1;
+  dockerfile.split("\n").forEach((text, i) => {
+    if (/^\s*FROM\s/i.test(text)) line = i + 1;
+  });
+  return line;
+}
+
+/** Point image findings at the Dockerfile's final FROM line, keeping the in-image path in the message. Pure. */
+export function anchorToDockerfile(findings: Finding[], path: string, text: string): Finding[] {
+  const line = finalFromLine(text);
+  return findings.map((f) => ({
+    ...f,
+    message: `${f.message} Found at /${f.location.path} in the image.`,
+    location: { path, startLine: line },
+  }));
 }
 
 /**
@@ -235,6 +261,10 @@ export async function scanImage(image: string, opts: ImageScanOptions = {}): Pro
     const out = await runImageScan(bins, image, { offline: opts.offline ?? false });
     findings = dedupe(out.findings);
     warnings.push(...out.warnings);
+    if (opts.dockerfile) {
+      const rel = relative(process.cwd(), resolve(opts.dockerfile)).split(sep).join("/");
+      findings = anchorToDockerfile(findings, rel, await readFile(opts.dockerfile, "utf8"));
+    }
     engines = [{ engine: "grype", ok: true, findings: findings.length, ms: Date.now() - started }];
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);

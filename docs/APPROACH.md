@@ -73,7 +73,7 @@ platforms are strongest). The product goal is global either way.
 | Secrets | ✅ | Gitleaks |
 | Supply chain (malicious, typosquat, install scripts) | ✅ | pkgrisk (ours) |
 | Infrastructure as code (Terraform, Kubernetes, Dockerfile, Helm, CloudFormation) | ✅ exposures only; hardening hidden | Trivy (Apache-2.0; KICS/Checkov can't be pinned) |
-| Container images | ✅ CLI (`--image`); not yet an Action input | Syft → Grype (Apache-2.0) |
+| Container images | ✅ CLI (`--image`) and Action (`image`) | Syft → Grype (Apache-2.0) |
 | SBOM (CycloneDX / SPDX), license compliance | ✅ | Syft (Apache-2.0) |
 | DAST: running web apps | ❌ | ZAP + Nuclei |
 | API security (OpenAPI-driven) | ❌ | ZAP |
@@ -192,8 +192,10 @@ hardening hidden, repo can't silence checks or trigger module downloads; bench c
 `bench/cases/iac/`). Licenses + SBOM via Syft ✓ built 2026-11-20 (`.hagstone/licenses.json` policy,
 base-branch copy in the Action; `hagstone sbom`; later VEX, AI-BOM and Cosign signing). Container
 images via Syft → Grype ✓ built 2026-11-20 (`hagstone scan --image`; one finding per source package;
-osv-scanner on a Syft SBOM was tried and missed openssl/zlib on Alpine). Open: an `image` Action input
-(check-run annotations need repo paths), a pinned-image recall bench (needs network + Grype's DB). Each: pinned + verified, normalized into
+osv-scanner on a Syft SBOM was tried and missed openssl/zlib on Alpine). Action `image` input ✓
+(findings anchored to the Dockerfile's FROM line; separate code scanning category). Engine signatures
+and provenance verified in CI (`engine-signatures.yml`) ✓. Open: a pinned-image recall bench (needs
+network + Grype's DB). Each: pinned + verified, normalized into
 `Finding`, benchmark cases.
 
 **Step 3 — SAST depth.**

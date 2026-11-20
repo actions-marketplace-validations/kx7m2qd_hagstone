@@ -1,8 +1,13 @@
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   addedLines,
   annotations,
+  checkOutput,
   commentBody,
+  isWorkspaceFile,
   itemsFromSarif,
   MAX_COMMENTS,
   report,
@@ -156,5 +161,57 @@ describe("report", () => {
     });
     await report({ ctx, event: prEvent, sha: "M", items: [item("1", "a.js", 9)], exitCode: 0, checkRun: false, prComments: true, minSeverity: "medium", log: () => {} });
     expect(calls.some((c) => c.url.endsWith("/reviews"))).toBe(false);
+  });
+
+  it("keeps findings outside the repository (image packages) out of annotations and comments, listing them in the summary", async () => {
+    const { ctx, calls } = fakeGitHub({
+      "POST https://api.test/repos/o/r/check-runs": () => ({ json: { id: 1 } }),
+      "/pulls/7/files": () => ({ json: [{ filename: "a.js", status: "modified", patch: "@@ -1 +1,2 @@\n x\n+y" }] }),
+      "/pulls/7/comments": () => ({ json: [] }),
+      "POST https://api.test/repos/o/r/pulls/7/reviews": () => ({}),
+    });
+    const items = [item("repo", "a.js", 2), { ...item("img", "lib/apk/db/installed", 1, "critical"), title: "openssl 3.1.0-r4 has 16 known vulnerabilities" }];
+    const log: string[] = [];
+    await report({ ctx, event: prEvent, sha: "M", items, exitCode: 1, checkRun: true, prComments: true, minSeverity: "medium", log: (l) => log.push(l), inRepo: (p) => p === "a.js" });
+    const create = calls.find((c) => c.method === "POST" && c.url.endsWith("/check-runs"))!;
+    expect(create.body.output.annotations.map((a: any) => a.path)).toEqual(["a.js"]);
+    expect(create.body.output.summary).toMatch(/1 critical, 1 high.*Not in a repository file \(1\):\n- \*\*critical\*\* openssl 3\.1\.0-r4 has 16 known vulnerabilities \(`lib\/apk\/db\/installed`\)/s);
+    expect(create.body.output.title).toBe("Findings at or above fail-on");
+    const review = calls.find((c) => c.url.endsWith("/reviews"))!;
+    expect(review.body.comments.map((c: any) => c.path)).toEqual(["a.js"]);
+    expect(log.join("\n")).toMatch(/1 outside the repository listed in its summary/);
+  });
+});
+
+describe("checkOutput", () => {
+  it("counts findings outside the repository and caps the list", () => {
+    const elsewhere = Array.from({ length: 53 }, (_, i) => item(`e${i}`, `usr/lib/x${i}`, 1, "medium"));
+    const out = checkOutput([], 0, elsewhere);
+    expect(out.title).toBe("53 findings, none at or above fail-on");
+    expect(out.summary).toContain("53 medium");
+    expect(out.summary).toContain("…and 3 more");
+    expect(checkOutput([item("a", "a.js", 1)], 0).summary).not.toContain("Not in a repository file");
+  });
+});
+
+describe("isWorkspaceFile", () => {
+  it("accepts regular files inside the workspace only", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hagstone-ws-"));
+    try {
+      const ws = join(dir, "ws");
+      await mkdir(join(ws, "src"), { recursive: true });
+      await writeFile(join(ws, "src/a.js"), "x");
+      await writeFile(join(dir, "outside.js"), "x");
+      expect(isWorkspaceFile(ws, "src/a.js")).toBe(true);
+      expect(isWorkspaceFile(ws, "src")).toBe(false);
+      expect(isWorkspaceFile(ws, "lib/apk/db/installed")).toBe(false);
+      expect(isWorkspaceFile(ws, "../outside.js")).toBe(false);
+      expect(isWorkspaceFile(ws, join(dir, "outside.js"))).toBe(false);
+      await symlink(join(dir, "outside.js"), join(ws, "link.js"));
+      // A symlink is still a path in the repo; GitHub resolves annotations by path.
+      expect(isWorkspaceFile(ws, "link.js")).toBe(true);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

@@ -2,7 +2,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve as resolvePath } from "node:path";
 import { parseArgs } from "node:util";
-import { itemsFromSarif, report } from "./action/github.js";
+import { isWorkspaceFile, itemsFromSarif, report } from "./action/github.js";
 import { baselineCreate, baselinePrune, suppress, type CommandResult } from "./commands/baseline.js";
 import { gateSeverity, SEVERITY_ORDER, severityAtLeast, type EngineName, type Severity } from "./core/finding.js";
 import { enginePath, installEngine, isInstalled, resolveEngine } from "./engines/install.js";
@@ -54,6 +54,9 @@ Usage:
                                    The first image scan downloads Grype's vulnerability database
                                    (several GB, cached; --offline uses the cached copy). Takes
                                    --format, --output, --fail-on, --baseline and --offline.
+      --dockerfile <file>          With --image: point findings at this Dockerfile's final FROM line
+                                   (a repo file, for code scanning and PR checks) instead of paths
+                                   inside the image.
       --license-policy <file>      Apply this license policy instead of <path>/.hagstone/licenses.json
                                    ({"allow": [...], "deny": [...]}; CI: pass the base branch's copy).
                                    Default: AGPL/SSPL (high), GPL (medium), non-commercial (high).
@@ -141,6 +144,7 @@ async function cmdScan(args: string[]): Promise<number> {
       "no-baseline": { type: "boolean", default: false },
       "license-policy": { type: "string" },
       image: { type: "string" },
+      dockerfile: { type: "string" },
     },
   });
   const format = values.format;
@@ -149,8 +153,14 @@ async function cmdScan(args: string[]): Promise<number> {
   if (failOn !== "none" && !SEVERITY_ORDER.includes(failOn as Severity)) fail(`unknown severity "${failOn}"`);
 
   if (values.image && positionals.length) fail("pass either a path or --image, not both");
+  if (values.dockerfile && !values.image) fail("--dockerfile goes with --image");
   const result: ScanResult = values.image
-    ? await scanImage(values.image, { autoInstall: !values["no-install"], offline: values.offline, baseline: values.baseline })
+    ? await scanImage(values.image, {
+        autoInstall: !values["no-install"],
+        offline: values.offline,
+        baseline: values.baseline,
+        dockerfile: values.dockerfile,
+      })
     : await scan(positionals[0] ?? ".", {
         engines: parseEngines(values.engines),
         autoInstall: !values["no-install"],
@@ -358,6 +368,7 @@ async function cmdActionReport(args: string[]): Promise<number> {
     prComments: values["pr-comments"] === "true",
     minSeverity: min,
     log: (line) => process.stdout.write(`${line}\n`),
+    inRepo: (path) => isWorkspaceFile(env.GITHUB_WORKSPACE ?? process.cwd(), path),
   });
   return 0;
 }

@@ -24,7 +24,8 @@ Hagstone reads untrusted repositories, so these are the things we treat as vulne
 - A raw secret value appearing in a finding, report, log, or anything sent off the machine
 - Source code leaving the machine (only package names/versions go to registries and osv.dev;
   `--offline` sends nothing)
-- Installing or running an engine binary that doesn't match its pinned SHA-256
+- Installing or running an engine binary that doesn't match its pinned SHA-256 (the pins themselves
+  are checked against upstream Sigstore signatures / SLSA provenance in CI on every change)
 - A scanned repo hiding findings from CI in a way the report doesn't surface (including an engine's
   own inline-ignore comments or config files, such as `trivy:ignore` or `trivy.yaml`)
 - Terminal escape or injection through finding text, or injection through GitHub Action inputs

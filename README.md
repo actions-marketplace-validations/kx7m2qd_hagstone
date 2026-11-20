@@ -28,7 +28,9 @@ names and versions to npm and PyPI and nothing else, and `--offline` turns those
   (`openssl (libcrypto3, libssl3)`), not one per CVE per binary. The first image scan downloads
   Grype's vulnerability database (several GB on disk, cached); `--offline` uses the cached copy.
 
-Engine binaries are pinned by version and SHA-256, and Hagstone checks them on every run.
+Engine binaries are pinned by version and SHA-256, and Hagstone checks them on every run. CI checks
+each pin against the upstream release's Sigstore signature or SLSA provenance (Gitleaks publishes
+neither).
 
 ## Install
 

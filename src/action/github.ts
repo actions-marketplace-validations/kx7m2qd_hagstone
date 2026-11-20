@@ -1,5 +1,7 @@
 // PR review comments + check run for the GitHub Action, built from Hagstone's SARIF report.
 // Spec: docs/specs/pr-feedback.md. Only Finding data (via SARIF) is sent; no source is read.
+import { statSync } from "node:fs";
+import { resolve, sep } from "node:path";
 import { SEVERITY_ORDER, severityAtLeast, type Severity } from "../core/finding.js";
 import { TOOL_NAME } from "../version.js";
 
@@ -62,6 +64,18 @@ function joinPath(prefix: string, uri: string): string {
   const p = prefix.replace(/\\/g, "/").replace(/^\.?\/+/, "").replace(/\/*$/, "");
   const u = uri.replace(/\\/g, "/").replace(/^\.\//, "");
   return p ? `${p}/${u}` : u;
+}
+
+/** True when `path` (repo-relative) is a regular file inside `workspace`. */
+export function isWorkspaceFile(workspace: string, path: string): boolean {
+  const root = resolve(workspace);
+  const full = resolve(root, path);
+  if (!full.startsWith(root + sep)) return false;
+  try {
+    return statSync(full).isFile();
+  } catch {
+    return false;
+  }
 }
 
 /** Line numbers (new side) that a unified-diff patch adds. */
@@ -138,9 +152,25 @@ export function annotations(items: ReportItem[]): object[] {
   }));
 }
 
-export function checkOutput(items: ReportItem[], exitCode: number): { conclusion: string; title: string; summary: string } {
-  const counts = SEVERITY_ORDER.map((s) => `${items.filter((f) => f.severity === s).length} ${s}`).join(", ");
-  if (exitCode === 0) return { conclusion: "success", title: `${items.length} finding${items.length === 1 ? "" : "s"}, none at or above fail-on`, summary: counts };
+const MAX_LISTED_ELSEWHERE = 50;
+
+/**
+ * Findings whose path isn't a file in the repository (e.g. a package inside a container image) can't
+ * be annotations or review comments, which GitHub ties to repo files; the check run summary lists them.
+ */
+function elsewhereSummary(elsewhere: ReportItem[]): string {
+  if (!elsewhere.length) return "";
+  const lines = elsewhere
+    .slice(0, MAX_LISTED_ELSEWHERE)
+    .map((f) => `- **${f.severity}** ${safeText(f.title, 200)} (\`${safeText(f.path, 200)}\`)`);
+  const more = elsewhere.length > MAX_LISTED_ELSEWHERE ? [`- …and ${elsewhere.length - MAX_LISTED_ELSEWHERE} more (see the SARIF report)`] : [];
+  return ["", "", `Not in a repository file (${elsewhere.length}):`, ...lines, ...more].join("\n");
+}
+
+export function checkOutput(items: ReportItem[], exitCode: number, elsewhere: ReportItem[] = []): { conclusion: string; title: string; summary: string } {
+  const all = [...items, ...elsewhere];
+  const counts = SEVERITY_ORDER.map((s) => `${all.filter((f) => f.severity === s).length} ${s}`).join(", ") + elsewhereSummary(elsewhere);
+  if (exitCode === 0) return { conclusion: "success", title: `${all.length} finding${all.length === 1 ? "" : "s"}, none at or above fail-on`, summary: counts };
   if (exitCode === 1) return { conclusion: "failure", title: "Findings at or above fail-on", summary: counts };
   return { conclusion: "failure", title: "Scan error", summary: `Hagstone could not complete the scan (exit ${exitCode}). See the Scan step log.` };
 }
@@ -193,8 +223,8 @@ async function paged(ctx: Ctx, path: string, maxPages = 30): Promise<any[]> {
   return all;
 }
 
-export async function postCheckRun(ctx: Ctx, headSha: string, items: ReportItem[], exitCode: number): Promise<void> {
-  const out = checkOutput(items, exitCode);
+export async function postCheckRun(ctx: Ctx, headSha: string, items: ReportItem[], exitCode: number, elsewhere: ReportItem[] = []): Promise<void> {
+  const out = checkOutput(items, exitCode, elsewhere);
   const anns = annotations(items);
   const first = anns.slice(0, ANNOTATION_BATCH);
   const output = { title: out.title, summary: out.summary };
@@ -249,12 +279,17 @@ export interface ReportOptions {
   prComments: boolean;
   minSeverity: Severity;
   log: (line: string) => void;
+  /** Whether a finding's path is a file in the checked-out repository. Default: assume it is. */
+  inRepo?: (path: string) => boolean;
 }
 
 /** Never throws for GitHub errors: the gate is a separate step. Returns lines for the log. */
 export async function report(o: ReportOptions): Promise<void> {
   const pr = o.event?.pull_request;
   const headSha: string = pr?.head?.sha ?? o.sha;
+  const inRepo = o.inRepo ?? (() => true);
+  const items = o.items.filter((f) => inRepo(f.path));
+  const elsewhere = o.items.filter((f) => !inRepo(f.path));
   const permHint = (what: string, perm: string, e: unknown) => {
     if (e instanceof GitHubError && (e.status === 403 || e.status === 404)) {
       o.log(`::notice::Hagstone skipped the ${what}: the token lacks \`${perm}\` (fork pull requests never have it).`);
@@ -264,15 +299,17 @@ export async function report(o: ReportOptions): Promise<void> {
   };
   if (o.checkRun) {
     try {
-      await postCheckRun(o.ctx, headSha, o.items, o.exitCode);
-      o.log(`Hagstone: check run posted (${Math.min(o.items.length, MAX_ANNOTATIONS)} annotations).`);
+      await postCheckRun(o.ctx, headSha, items, o.exitCode, elsewhere);
+      o.log(
+        `Hagstone: check run posted (${Math.min(items.length, MAX_ANNOTATIONS)} annotations${elsewhere.length ? `; ${elsewhere.length} outside the repository listed in its summary` : ""}).`,
+      );
     } catch (e) {
       permHint("check run", "checks: write", e);
     }
   }
   if (o.prComments && pr?.number) {
     try {
-      const r = await postReview(o.ctx, { number: pr.number, headSha }, o.items, o.minSeverity);
+      const r = await postReview(o.ctx, { number: pr.number, headSha }, items, o.minSeverity);
       o.log(`Hagstone: ${r.posted} new review comment${r.posted === 1 ? "" : "s"}${r.skipped ? ` (${r.skipped} over the cap)` : ""}.`);
     } catch (e) {
       permHint("pull request comments", "pull-requests: write", e);

@@ -17,8 +17,11 @@ into `Finding`, benchmarked, quiet.
 | Container image vulnerabilities | **Grype** 0.122.1 | Apache-2.0 | Matches vulnerabilities from Syft's SBOM, so an image is catalogued once and the SBOM and the findings agree. |
 
 All three: archives pinned by SHA-256 (matching the published checksum files) and the extracted
-binary re-checked before every run. Each checksum file's Sigstore bundle signs that digest and has a
-transparency-log entry; full `cosign verify-blob` is still a TODO (as for Opengrep).
+binary re-checked before every run. Signatures are verified in CI by `npm run verify:engines`
+(`.github/workflows/engine-signatures.yml`, on every manifest change): cosign checks each checksum
+file's Sigstore bundle, requiring the release workflow's identity and the release tag's commit
+(`--certificate-github-workflow-sha`); a wrong-commit canary must fail. Opengrep (per-artifact
+signatures) and osv-scanner (SLSA provenance) are checked the same way; Gitleaks publishes no signature.
 
 **Trivy's March 2026 compromise** (CVE-2026-33634 / GHSA-69fq-xp46-6x23: a stolen bot token published a
 malicious v0.69.4 and force-pushed the `trivy-action` tags). Pinning by hash is the defense: we never
@@ -123,8 +126,15 @@ a labeled line must not hide it, and a remote module must not be fetched.
   it out of the engine cache). `--offline` uses the cached copy and says when it was built. The image's
   package list never leaves the machine; pulling the image talks to its registry.
 - Baseline: only with `--baseline <file>` (an image has no repo root); never reports stale entries.
-- Not yet: an Action `image` input (check-run annotations expect repo paths), and a benchmark (needs a
-  pinned image + network; unit tests use recorded real Grype output for `alpine:3.18.0`).
+- `--dockerfile <file>`: findings point at its final `FROM` line (the stage that becomes the image),
+  with "Found at /<path> in the image." in the message, so SARIF, check runs and PR comments get a
+  real repo file.
+- Action `image` input: uses `dockerfile` (default `<path>/Dockerfile` if present), uploads under
+  `hagstone-image:<name>` (so the repo scan's alerts are never replaced), and skips the repo's ignore,
+  baseline and license files. The report step lists any finding whose path isn't a file in the
+  checkout in the check run summary instead of annotating it.
+- Not yet: a benchmark (needs a pinned image + network; unit tests use recorded real Grype output for
+  `alpine:3.18.0`).
 
 ## Done criteria (each milestone)
 - `npm run check` and `npm run bench` pass; unit tests for the normalizer, the copy/sanitize step and

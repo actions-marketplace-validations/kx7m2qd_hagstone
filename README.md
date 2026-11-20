@@ -23,6 +23,10 @@ names and versions to npm and PyPI and nothing else, and `--offline` turns those
   AGPL/SSPL, GPL and non-commercial licenses are reported (`A OR B` is fine if either option is);
   `.hagstone/licenses.json` (`{"allow": [...], "deny": [...]}`) adjusts that. `hagstone sbom` writes a
   CycloneDX or SPDX SBOM.
+- **Container images:** `hagstone scan --image <ref>`. Syft catalogs the image and
+  [Grype](https://github.com/anchore/grype) matches it: one finding per source package to upgrade
+  (`openssl (libcrypto3, libssl3)`), not one per CVE per binary. The first image scan downloads
+  Grype's vulnerability database (several GB on disk, cached); `--offline` uses the cached copy.
 
 Engine binaries are pinned by version and SHA-256, and Hagstone checks them on every run.
 
@@ -45,7 +49,8 @@ Linux x64 and macOS arm64.
 ```sh
 hagstone scan [path]                 # text report; exits 1 on findings at or above --fail-on (default: high)
 hagstone scan --format sarif --output hagstone.sarif
-hagstone sbom --output sbom.cdx.json # CycloneDX SBOM (--format spdx for SPDX)
+hagstone scan --image ghcr.io/org/app:1.2   # container image (registry, docker:, oci-archive:)
+hagstone sbom --output sbom.cdx.json # CycloneDX SBOM (--format spdx for SPDX); --image for an image
 hagstone hook install                # pre-commit hook: scans staged changes for code issues and secrets
 hagstone mcp                         # MCP server for coding agents (scan, explain, check_package)
 hagstone --help                      # every flag

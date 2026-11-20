@@ -17,7 +17,7 @@ import { serve } from "./mcp/protocol.js";
 import { createTools, INSTRUCTIONS } from "./mcp/tools.js";
 import { toSarif } from "./report/sarif.js";
 import { toText } from "./report/text.js";
-import { ALL_ENGINES, scan } from "./scan.js";
+import { ALL_ENGINES, scan, scanImage, type ScanResult } from "./scan.js";
 import { TOOL_NAME, TOOL_VERSION } from "./version.js";
 
 const HELP = `${TOOL_NAME} ${TOOL_VERSION} — local-first application security scanner
@@ -48,6 +48,12 @@ Usage:
       --baseline <file>            Apply this baseline instead of <path>/.hagstone/baseline.json
                                    (CI: pass the base branch's copy so a PR can't hide its own findings)
       --no-baseline                Ignore the baseline: report and gate on every finding
+      --image <ref>                Scan a container image instead of a directory (alpine:3.20,
+                                   registry:ghcr.io/org/app:1.2, docker:app:dev, oci-archive:app.tar).
+                                   Syft catalogs it, Grype matches it; one finding per source package.
+                                   The first image scan downloads Grype's vulnerability database
+                                   (several GB, cached; --offline uses the cached copy). Takes
+                                   --format, --output, --fail-on, --baseline and --offline.
       --license-policy <file>      Apply this license policy instead of <path>/.hagstone/licenses.json
                                    ({"allow": [...], "deny": [...]}; CI: pass the base branch's copy).
                                    Default: AGPL/SSPL (high), GPL (medium), non-commercial (high).
@@ -57,9 +63,9 @@ Usage:
   Python package licenses on pypi.org. Source code, file paths and manifest contents never leave
   your machine. Use --offline to send nothing.
 
-  ${TOOL_NAME} sbom [path] [--format cyclonedx|spdx] [--output <file>] [--offline]
-                                    Write an SBOM of the project's shipped dependencies (Syft;
-                                    CycloneDX JSON by default, or SPDX JSON).
+  ${TOOL_NAME} sbom [path] [--image <ref>] [--format cyclonedx|spdx] [--output <file>] [--offline]
+                                    Write an SBOM of the project's shipped dependencies, or of an
+                                    image (Syft; CycloneDX JSON by default, or SPDX JSON).
 
   ${TOOL_NAME} baseline create [path] [--force]
                                     Snapshot every current finding into .hagstone/baseline.json (commit
@@ -134,6 +140,7 @@ async function cmdScan(args: string[]): Promise<number> {
       baseline: { type: "string" },
       "no-baseline": { type: "boolean", default: false },
       "license-policy": { type: "string" },
+      image: { type: "string" },
     },
   });
   const format = values.format;
@@ -141,19 +148,22 @@ async function cmdScan(args: string[]): Promise<number> {
   const failOn = values["fail-on"];
   if (failOn !== "none" && !SEVERITY_ORDER.includes(failOn as Severity)) fail(`unknown severity "${failOn}"`);
 
-  const result = await scan(positionals[0] ?? ".", {
-    engines: parseEngines(values.engines),
-    autoInstall: !values["no-install"],
-    offline: values.offline,
-    reachability: !values["no-reachability"],
-    reachableOnly: values["reachable-only"],
-    ignoreFile: values["ignore-file"],
-    includeTests: values["include-tests"],
-    includeHardening: values["include-hardening"],
-    baseline: values.baseline,
-    noBaseline: values["no-baseline"],
-    licensePolicy: values["license-policy"],
-  });
+  if (values.image && positionals.length) fail("pass either a path or --image, not both");
+  const result: ScanResult = values.image
+    ? await scanImage(values.image, { autoInstall: !values["no-install"], offline: values.offline, baseline: values.baseline })
+    : await scan(positionals[0] ?? ".", {
+        engines: parseEngines(values.engines),
+        autoInstall: !values["no-install"],
+        offline: values.offline,
+        reachability: !values["no-reachability"],
+        reachableOnly: values["reachable-only"],
+        ignoreFile: values["ignore-file"],
+        includeTests: values["include-tests"],
+        includeHardening: values["include-hardening"],
+        baseline: values.baseline,
+        noBaseline: values["no-baseline"],
+        licensePolicy: values["license-policy"],
+      });
 
   const report =
     format === "json"
@@ -189,14 +199,17 @@ async function cmdSbom(args: string[]): Promise<number> {
       output: { type: "string" },
       offline: { type: "boolean", default: false },
       "no-install": { type: "boolean", default: false },
+      image: { type: "string" },
     },
   });
   const format = values.format as SbomFormat;
   if (format !== "cyclonedx" && format !== "spdx") fail(`unknown SBOM format "${values.format}" (cyclonedx or spdx)`);
-  if (positionals.length > 1) fail(`usage: ${TOOL_NAME} sbom [path] [--format cyclonedx|spdx] [--output <file>] [--offline]`);
+  if (positionals.length > 1 || (values.image && positionals.length))
+    fail(`usage: ${TOOL_NAME} sbom [path] [--image <ref>] [--format cyclonedx|spdx] [--output <file>] [--offline]`);
   const root = resolvePath(positionals[0] ?? ".");
   const bin = await resolveEngine("syft", { autoInstall: !values["no-install"] });
-  const sbom = await runSyft(bin, root, await loadIgnorePatterns(root), { format, offline: values.offline });
+  const ignores = values.image ? [] : await loadIgnorePatterns(root);
+  const sbom = await runSyft(bin, root, ignores, { format, offline: values.offline, image: values.image });
   if (values.output) {
     await writeFile(values.output, sbom);
     process.stderr.write(`${TOOL_NAME}: wrote a ${format === "cyclonedx" ? "CycloneDX" : "SPDX"} SBOM to ${values.output}\n`);

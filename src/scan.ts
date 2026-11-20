@@ -4,6 +4,7 @@ import { dedupe, sortFindings, type EngineName, type Finding } from "./core/find
 import { DEFAULT_IGNORES, isIgnored, loadIgnorePatterns } from "./core/ignore.js";
 import { pathScope } from "./core/scope.js";
 import { runGitleaks } from "./engines/gitleaks.js";
+import { runImageScan } from "./engines/grype.js";
 import { overrideVar, resolveEngine } from "./engines/install.js";
 import type { BinaryEngine } from "./engines/manifest.js";
 import { runOpengrep } from "./engines/opengrep.js";
@@ -202,6 +203,69 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
     warnings,
     engines: statuses,
     hiddenInTests,
+    ...(suppressed ? { suppressed } : {}),
+    ...(baseline ? { baseline } : {}),
+  };
+}
+
+export interface ImageScanOptions {
+  autoInstall?: boolean;
+  /** Use the cached vulnerability database; don't download or update it. */
+  offline?: boolean;
+  /** Baseline to apply (an image has no repo root, so there is no default one). */
+  baseline?: string;
+}
+
+/**
+ * Scan a container image: syft catalogs it, grype matches the catalog against its vulnerability
+ * database. One finding per source package version, like dependency findings for a directory.
+ */
+export async function scanImage(image: string, opts: ImageScanOptions = {}): Promise<ScanResult> {
+  const autoInstall = opts.autoInstall ?? true;
+  const started = Date.now();
+  const warnings: string[] = [];
+  for (const engine of ["syft", "grype"] as const) {
+    const v = overrideVar(engine);
+    if (process.env[v]) warnings.push(`${engine}: using ${v}=${process.env[v]}, which is not checksum-verified`);
+  }
+  let findings: Finding[] = [];
+  let engines: EngineStatus[];
+  try {
+    const bins = { syft: await resolveEngine("syft", { autoInstall }), grype: await resolveEngine("grype", { autoInstall }) };
+    const out = await runImageScan(bins, image, { offline: opts.offline ?? false });
+    findings = dedupe(out.findings);
+    warnings.push(...out.warnings);
+    engines = [{ engine: "grype", ok: true, findings: findings.length, ms: Date.now() - started }];
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    warnings.push(`image scan failed: ${error}`);
+    engines = [{ engine: "grype", ok: false, findings: 0, ms: Date.now() - started, error }];
+  }
+
+  let suppressed: Finding[] | undefined;
+  let baseline: BaselineSummary | undefined;
+  if (opts.baseline) {
+    const { file, error } = await loadBaseline(resolve(opts.baseline));
+    if (error) warnings.push(`baseline ${opts.baseline} not applied (${error}), so every finding is shown`);
+    else if (file) {
+      const a = applyBaseline(findings, [], file, today());
+      findings = a.active;
+      suppressed = sortFindings(a.suppressed);
+      // Image findings never cover a repo's code entries, so nothing can be called stale.
+      baseline = {
+        file: opts.baseline,
+        baselined: a.suppressed.filter((f) => f.suppression?.kind === "baseline").length,
+        suppressed: a.suppressed.filter((f) => f.suppression?.kind !== "baseline").length,
+        resurfaced: a.resurfaced,
+      };
+    }
+  }
+  return {
+    root: image,
+    findings: sortFindings(findings),
+    ignores: [],
+    warnings,
+    engines,
     ...(suppressed ? { suppressed } : {}),
     ...(baseline ? { baseline } : {}),
   };

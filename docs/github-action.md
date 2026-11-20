@@ -57,3 +57,16 @@ Outputs: `exit-code` (0 clean, 1 findings at/above `fail-on`, 2 scan error) and 
   code scanning alerts close; the job summary shows the counts.
 - `@v0` follows the latest 0.x release. For a fixed, auditable version, pin a full commit SHA
   (`kx7m2qd/hagstone@<sha> # v0.2.0`). Avoid `@main`: it changes with every push.
+- `.hagstone/licenses.json` (license allow / deny lists) works the same way: the base branch's copy
+  is used on pull requests, and a PR that changes it gets a warning.
+- IaC findings come from Trivy's built-in checks; inline `trivy:ignore` comments in the repo are not
+  honoured (use `hagstone suppress`), and remote Terraform modules are never downloaded.
+- Container images aren't an Action input yet. Scan one in a job step after building it:
+
+  ```yaml
+  - run: npx -y hagstone@0 scan --image docker:my-app:${{ github.sha }} --format sarif --output image.sarif
+  - uses: github/codeql-action/upload-sarif@<sha> # pin it
+    with: { sarif_file: image.sarif, category: hagstone-image }
+  ```
+
+  Grype's vulnerability database (several GB) is downloaded on the first image scan in a job.

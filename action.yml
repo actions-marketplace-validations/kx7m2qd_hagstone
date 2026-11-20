@@ -72,6 +72,8 @@ runs:
         npm ci --no-audit --no-fund --ignore-scripts
         npm run build
         echo "HAGSTONE_HOME=$RUNNER_TEMP/hagstone-home" >> "$GITHUB_ENV"
+        # Grype's vulnerability database (image scans) is several GB: keep it out of the engine cache.
+        echo "HAGSTONE_GRYPE_DB_DIR=$RUNNER_TEMP/hagstone-grype-db" >> "$GITHUB_ENV"
         echo "engines-key=hagstone-engines-$RUNNER_OS-$RUNNER_ARCH-$(sha256sum src/engines/manifest.ts | cut -c1-16)" >> "$GITHUB_OUTPUT"
       id: build
 

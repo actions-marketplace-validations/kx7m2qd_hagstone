@@ -137,7 +137,7 @@ export interface SyftDocument {
   artifacts?: SyftPackage[] | null;
 }
 
-const ECOSYSTEM: Record<string, string> = {
+export const ECOSYSTEM: Record<string, string> = {
   npm: "npm",
   python: "PyPI",
   "go-module": "Go",
@@ -246,7 +246,7 @@ export async function runSyft(
   bin: string,
   root: string,
   ignores: string[],
-  opts: { format: SbomFormat | "syft"; offline: boolean },
+  opts: { format: SbomFormat | "syft"; offline: boolean; /** An image reference instead of the directory. */ image?: string },
 ): Promise<string> {
   const work = await mkdtemp(join(tmpdir(), "hagstone-syft-"));
   try {
@@ -256,7 +256,14 @@ export async function runSyft(
     await writeFile(config, syftConfig({ offline: opts.offline, cacheDir: join(cacheRoot(), "syft") }));
     const res = await run(
       bin,
-      ["scan", `dir:${root}`, "--quiet", `--config=${config}`, ...syftExcludes(ignores).map((e) => `--exclude=${e}`), `--output=${SYFT_FORMAT[opts.format]}`],
+      [
+        "scan",
+        opts.image ?? `dir:${root}`,
+        "--quiet",
+        `--config=${config}`,
+        ...(opts.image ? [] : syftExcludes(ignores).map((e) => `--exclude=${e}`)),
+        `--output=${SYFT_FORMAT[opts.format]}`,
+      ],
       { cwd: empty },
     );
     if (res.code !== 0) throw new Error(`syft exited ${res.code}: ${res.stderr.trim().slice(-500)}`);

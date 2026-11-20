@@ -105,14 +105,26 @@ a labeled line must not hide it, and a remote module must not be fetched.
   workflows are skipped (they don't ship). Test and example lockfiles are hidden by default.
 - Bench: `bench/cases/licenses/` (offline; expected.json), scored with the supply-chain cases.
 
-## 3. Container images (Syft → Grype) — milestone after SBOM
-- `hagstone scan --image <ref>` (registry or `docker:` / `oci-archive:` / tar): Syft catalogs the
-  image, Grype matches that SBOM, findings are `category: "dependency"`, `engine: "grype"`, one per
-  package version (same `vulnerable-dependency` rule id and grouping as osv-scanner), location = the
-  image layer path of the package.
-- Grype's vulnerability database is downloaded at run time from Anchore (Grype checks its checksum);
-  it lives under the Hagstone cache directory. The image name and package list never leave the machine;
-  the database download is the only network use (`--offline` uses the cached database).
+## 3. Container images (Syft → Grype) — built 2026-11-20
+- `hagstone scan --image <ref>` (`registry:`, `docker:`, `oci-archive:`, … or a bare reference) and
+  `hagstone sbom --image <ref>`. Syft catalogs the image, Grype matches that SBOM.
+- Why Grype and not osv-scanner on the SBOM (tried on `alpine:3.18.0`): osv-scanner found busybox
+  and musl but missed openssl (`libcrypto3`/`libssl3`, 16 advisories incl. HIGH CVE-2024-6119) and
+  zlib, because Alpine's OSV records are keyed by source package. Grype found all of them.
+- Findings: `category: "dependency"`, `engine: "grype"`, `vulnerable-dependency`, **one per source
+  package version** (grouped by the purl's `upstream=`: openssl covers libcrypto3 + libssl3; you
+  upgrade them together). 63 raw matches on alpine:3.18.0 → 4 findings. Fingerprint: grype, rule,
+  ecosystem, source package, version (no image name or path, so decisions carry across image tags).
+  Fix target = highest first fix across advisories, compared distro-style (`-rN` is a revision).
+  Won't-fix advisories are named in the message. Negligible ones (Debian "unimportant") are counted,
+  not reported. Location: the package database path inside the image.
+- Grype's vulnerability database (~3 GB on disk) is downloaded from Anchore on the first image scan
+  (Grype verifies its checksum) into `<cache>/grype-db` or `HAGSTONE_GRYPE_DB_DIR` (the Action keeps
+  it out of the engine cache). `--offline` uses the cached copy and says when it was built. The image's
+  package list never leaves the machine; pulling the image talks to its registry.
+- Baseline: only with `--baseline <file>` (an image has no repo root); never reports stale entries.
+- Not yet: an Action `image` input (check-run annotations expect repo paths), and a benchmark (needs a
+  pinned image + network; unit tests use recorded real Grype output for `alpine:3.18.0`).
 
 ## Done criteria (each milestone)
 - `npm run check` and `npm run bench` pass; unit tests for the normalizer, the copy/sanitize step and

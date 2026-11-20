@@ -1,0 +1,2177 @@
+{
+ "_doc": "Trimmed from real `grype -o json` output for registry:alpine:3.18.0, database built 2026-11-20 (grype 0.122.1). Only the fields Hagstone reads.",
+ "matches": [
+  {
+   "vulnerability": {
+    "id": "CVE-2024-6119",
+    "severity": "High",
+    "fix": {
+     "versions": [
+      "3.1.7-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 7.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-6119"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-6119",
+    "severity": "High",
+    "fix": {
+     "versions": [
+      "3.1.7-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 7.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-6119"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-2650",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.1-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 6.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-2650"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-2650",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.1-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 6.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-2650"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-2511",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.4-r6"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.9
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-2511"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-2511",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.4-r6"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.9
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-2511"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-9143",
+    "severity": "High",
+    "fix": {
+     "versions": [
+      "3.1.7-r1"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 8.8
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-9143"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-9143",
+    "severity": "High",
+    "fix": {
+     "versions": [
+      "3.1.7-r1"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 8.8
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-9143"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-5535",
+    "severity": "Critical",
+    "fix": {
+     "versions": [
+      "3.1.6-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 9.1
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-5535"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-5535",
+    "severity": "Critical",
+    "fix": {
+     "versions": [
+      "3.1.6-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 9.1
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-5535"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-3446",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.1-r3"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.3
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-3446"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-3446",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.1-r3"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.3
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-3446"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-4741",
+    "severity": "Critical",
+    "fix": {
+     "versions": [
+      "3.1.6-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 9.8
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-4741"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-4741",
+    "severity": "Critical",
+    "fix": {
+     "versions": [
+      "3.1.6-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 9.8
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-4741"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2022-48174",
+    "severity": "Critical",
+    "fix": {
+     "versions": [
+      "1.36.1-r1"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 9.8
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2022-48174"
+    }
+   ],
+   "artifact": {
+    "name": "busybox",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2022-48174",
+    "severity": "Critical",
+    "fix": {
+     "versions": [
+      "1.36.1-r1"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 9.8
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2022-48174"
+    }
+   ],
+   "artifact": {
+    "name": "busybox-binsh",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox-binsh@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2022-48174",
+    "severity": "Critical",
+    "fix": {
+     "versions": [
+      "1.36.1-r1"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 9.8
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2022-48174"
+    }
+   ],
+   "artifact": {
+    "name": "ssl_client",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/ssl_client@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-5363",
+    "severity": "High",
+    "fix": {
+     "versions": [
+      "3.1.4-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 7.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-5363"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-5363",
+    "severity": "High",
+    "fix": {
+     "versions": [
+      "3.1.4-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 7.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-5363"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-5678",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.4-r1"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.3
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-5678"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-5678",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.4-r1"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.3
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-5678"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-0727",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.4-r5"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-0727"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-0727",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.4-r5"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-0727"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-3817",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.2-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.3
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-3817"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-3817",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.2-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.3
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-3817"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-6237",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.4-r4"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.9
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-6237"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-6237",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.4-r4"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.9
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-6237"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-6129",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.4-r3"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 6.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-6129"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-6129",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.4-r3"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 6.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-6129"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-4603",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.5-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.3
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-4603"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-4603",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.5-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.3
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-4603"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-13176",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.8-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 4.6
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-13176"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-13176",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.8-r0"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 4.6
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2024-13176"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-2975",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.1-r2"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.3
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-2975"
+    }
+   ],
+   "artifact": {
+    "name": "libcrypto3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libcrypto3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-2975",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "3.1.1-r2"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.3
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-2975"
+    }
+   ],
+   "artifact": {
+    "name": "libssl3",
+    "version": "3.1.0-r4",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/libssl3@3.1.0-r4?arch=aarch64&distro=alpine-3.18.0&upstream=openssl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2025-26519",
+    "severity": "High",
+    "fix": {
+     "versions": [
+      "1.2.4-r3"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 7
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2025-26519"
+    }
+   ],
+   "artifact": {
+    "name": "musl",
+    "version": "1.2.4-r0",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/musl@1.2.4-r0?arch=aarch64&distro=alpine-3.18.0",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2025-26519",
+    "severity": "High",
+    "fix": {
+     "versions": [
+      "1.2.4-r3"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 7
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2025-26519"
+    }
+   ],
+   "artifact": {
+    "name": "musl-utils",
+    "version": "1.2.4-r0",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/musl-utils@1.2.4-r0?arch=aarch64&distro=alpine-3.18.0&upstream=musl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-42364",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "1.36.1-r7"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-42364"
+    }
+   ],
+   "artifact": {
+    "name": "busybox",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-42364",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "1.36.1-r7"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-42364"
+    }
+   ],
+   "artifact": {
+    "name": "busybox-binsh",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox-binsh@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-42364",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "1.36.1-r7"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-42364"
+    }
+   ],
+   "artifact": {
+    "name": "ssl_client",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/ssl_client@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-42363",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "1.36.1-r7"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-42363"
+    }
+   ],
+   "artifact": {
+    "name": "busybox",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-42363",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "1.36.1-r7"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-42363"
+    }
+   ],
+   "artifact": {
+    "name": "busybox-binsh",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox-binsh@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-42363",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "1.36.1-r7"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-42363"
+    }
+   ],
+   "artifact": {
+    "name": "ssl_client",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/ssl_client@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-42366",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "1.36.1-r6"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-42366"
+    }
+   ],
+   "artifact": {
+    "name": "busybox",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-42366",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "1.36.1-r6"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-42366"
+    }
+   ],
+   "artifact": {
+    "name": "busybox-binsh",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox-binsh@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-42366",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "1.36.1-r6"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-42366"
+    }
+   ],
+   "artifact": {
+    "name": "ssl_client",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/ssl_client@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-42365",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "1.36.1-r7"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-42365"
+    }
+   ],
+   "artifact": {
+    "name": "busybox",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-42365",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "1.36.1-r7"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-42365"
+    }
+   ],
+   "artifact": {
+    "name": "busybox-binsh",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox-binsh@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2023-42365",
+    "severity": "Medium",
+    "fix": {
+     "versions": [
+      "1.36.1-r7"
+     ],
+     "state": "fixed"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [
+    {
+     "id": "CVE-2023-42365"
+    }
+   ],
+   "artifact": {
+    "name": "ssl_client",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/ssl_client@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2025-60876",
+    "severity": "Medium",
+    "fix": {
+     "versions": [],
+     "state": ""
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 6.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "busybox",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2025-60876",
+    "severity": "Medium",
+    "fix": {
+     "versions": [],
+     "state": ""
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 6.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "busybox-binsh",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox-binsh@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2025-60876",
+    "severity": "Medium",
+    "fix": {
+     "versions": [],
+     "state": ""
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 6.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "ssl_client",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/ssl_client@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2026-40200",
+    "severity": "High",
+    "fix": {
+     "versions": [],
+     "state": ""
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 8.1
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "musl",
+    "version": "1.2.4-r0",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/musl@1.2.4-r0?arch=aarch64&distro=alpine-3.18.0",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2026-40200",
+    "severity": "High",
+    "fix": {
+     "versions": [],
+     "state": ""
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 8.1
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "musl-utils",
+    "version": "1.2.4-r0",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/musl-utils@1.2.4-r0?arch=aarch64&distro=alpine-3.18.0&upstream=musl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2026-27171",
+    "severity": "Medium",
+    "fix": {
+     "versions": [],
+     "state": "unknown"
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 5.5
+      }
+     },
+     {
+      "metrics": {
+       "baseScore": 2.9
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "zlib",
+    "version": "1.2.13-r1",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/zlib@1.2.13-r1?arch=aarch64&distro=alpine-3.18.0",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2026-6042",
+    "severity": "Medium",
+    "fix": {
+     "versions": [],
+     "state": ""
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 4.8
+      }
+     },
+     {
+      "metrics": {
+       "baseScore": 3.3
+      }
+     },
+     {
+      "metrics": {
+       "baseScore": 1.7
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "musl",
+    "version": "1.2.4-r0",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/musl@1.2.4-r0?arch=aarch64&distro=alpine-3.18.0",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2026-6042",
+    "severity": "Medium",
+    "fix": {
+     "versions": [],
+     "state": ""
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 4.8
+      }
+     },
+     {
+      "metrics": {
+       "baseScore": 3.3
+      }
+     },
+     {
+      "metrics": {
+       "baseScore": 1.7
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "musl-utils",
+    "version": "1.2.4-r0",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/musl-utils@1.2.4-r0?arch=aarch64&distro=alpine-3.18.0&upstream=musl",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2025-46394",
+    "severity": "Low",
+    "fix": {
+     "versions": [],
+     "state": ""
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 3.3
+      }
+     },
+     {
+      "metrics": {
+       "baseScore": 3.2
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "busybox",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2025-46394",
+    "severity": "Low",
+    "fix": {
+     "versions": [],
+     "state": ""
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 3.3
+      }
+     },
+     {
+      "metrics": {
+       "baseScore": 3.2
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "busybox-binsh",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox-binsh@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2025-46394",
+    "severity": "Low",
+    "fix": {
+     "versions": [],
+     "state": ""
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 3.3
+      }
+     },
+     {
+      "metrics": {
+       "baseScore": 3.2
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "ssl_client",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/ssl_client@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-58251",
+    "severity": "Low",
+    "fix": {
+     "versions": [],
+     "state": ""
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 2.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "busybox",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-58251",
+    "severity": "Low",
+    "fix": {
+     "versions": [],
+     "state": ""
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 2.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "busybox-binsh",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/busybox-binsh@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  },
+  {
+   "vulnerability": {
+    "id": "CVE-2024-58251",
+    "severity": "Low",
+    "fix": {
+     "versions": [],
+     "state": ""
+    },
+    "cvss": [
+     {
+      "metrics": {
+       "baseScore": 2.5
+      }
+     }
+    ]
+   },
+   "relatedVulnerabilities": [],
+   "artifact": {
+    "name": "ssl_client",
+    "version": "1.36.0-r9",
+    "type": "apk",
+    "purl": "pkg:apk/alpine/ssl_client@1.36.0-r9?arch=aarch64&distro=alpine-3.18.0&upstream=busybox",
+    "locations": [
+     {
+      "path": "/lib/apk/db/installed"
+     }
+    ]
+   }
+  }
+ ],
+ "distro": {
+  "name": "alpine",
+  "version": "3.18.0"
+ },
+ "descriptor": {
+  "db": {
+   "status": {
+    "built": "2026-11-20T06:21:00Z"
+   }
+  }
+ }
+}

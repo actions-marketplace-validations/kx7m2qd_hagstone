@@ -73,7 +73,7 @@ platforms are strongest). The product goal is global either way.
 | Secrets | ✅ | Gitleaks |
 | Supply chain (malicious, typosquat, install scripts) | ✅ | pkgrisk (ours) |
 | Infrastructure as code (Terraform, Kubernetes, Dockerfile, Helm, CloudFormation) | ✅ exposures only; hardening hidden | Trivy (Apache-2.0; KICS/Checkov can't be pinned) |
-| Container images | ❌ (designed) | Syft → Grype (Apache-2.0) |
+| Container images | ✅ CLI (`--image`); not yet an Action input | Syft → Grype (Apache-2.0) |
 | SBOM (CycloneDX / SPDX), license compliance | ✅ | Syft (Apache-2.0) |
 | DAST: running web apps | ❌ | ZAP + Nuclei |
 | API security (OpenAPI-driven) | ❌ | ZAP |
@@ -109,7 +109,7 @@ platforms are strongest). The product goal is global either way.
       ├─ engines/pkgrisk    → supply chain                ├─ normalize → Finding[] → scope / ignore / dedupe
       ├─ engines/trivy      → IaC (sanitized copy)        │
       ├─ engines/syft       → licenses; `hagstone sbom`   │
-      ├─ (planned) container images (Syft → Grype)        │        → reachability → baseline
+      ├─ engines/grype      → `scan --image` (Syft → Grype)│        → reachability → baseline
       │                                                   │                  │
  hagstone dast <url>  (planned; running app in the        │                  ├─ correlate (DAST ↔ SAST)
       └─ ZAP, Nuclei, access-control agent  customer's CI)┘                  ├─ report: text / json / sarif / PR
@@ -190,8 +190,10 @@ Design (agreed 2026-11-18): one committed file (`.hagstone/baseline.json`) holdi
 2026-11-20 after the license + pinning check). IaC via Trivy ✓ built 2026-11-20 (exposures reported,
 hardening hidden, repo can't silence checks or trigger module downloads; bench cases in
 `bench/cases/iac/`). Licenses + SBOM via Syft ✓ built 2026-11-20 (`.hagstone/licenses.json` policy,
-base-branch copy in the Action; `hagstone sbom`; later VEX, AI-BOM and Cosign signing). Next:
-container images (Syft → Grype). Each: pinned + verified, normalized into
+base-branch copy in the Action; `hagstone sbom`; later VEX, AI-BOM and Cosign signing). Container
+images via Syft → Grype ✓ built 2026-11-20 (`hagstone scan --image`; one finding per source package;
+osv-scanner on a Syft SBOM was tried and missed openssl/zlib on Alpine). Open: an `image` Action input
+(check-run annotations need repo paths), a pinned-image recall bench (needs network + Grype's DB). Each: pinned + verified, normalized into
 `Finding`, benchmark cases.
 
 **Step 3 — SAST depth.**

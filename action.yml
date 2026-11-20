@@ -72,6 +72,8 @@ runs:
         npm ci --no-audit --no-fund --ignore-scripts
         npm run build
         echo "HAGSTONE_HOME=$RUNNER_TEMP/hagstone-home" >> "$GITHUB_ENV"
+        # Grype's vulnerability database (image scans) is several GB: keep it out of the engine cache.
+        echo "HAGSTONE_GRYPE_DB_DIR=$RUNNER_TEMP/hagstone-grype-db" >> "$GITHUB_ENV"
         echo "engines-key=hagstone-engines-$RUNNER_OS-$RUNNER_ARCH-$(sha256sum src/engines/manifest.ts | cut -c1-16)" >> "$GITHUB_OUTPUT"
       id: build
 
@@ -134,6 +136,15 @@ runs:
             if ! cmp -s "$base_baseline" "$head_baseline" 2>/dev/null; then
               echo "::warning file=${prefix}.hagstone/baseline.json::This pull request changes the Hagstone baseline. The check used the base branch's version; the change takes effect after merge."
             fi
+          fi
+
+          # And for the license policy: a PR must not be able to allow the license it adds.
+          base_licenses="$RUNNER_TEMP/hagstone-base-licenses.json"
+          git -C "$IN_PATH" show "$BASE_SHA:${prefix}.hagstone/licenses.json" > "$base_licenses" 2>/dev/null || : > "$base_licenses"
+          args+=(--license-policy "$base_licenses")
+          head_licenses="$IN_PATH/.hagstone/licenses.json"
+          if { [ -f "$head_licenses" ] || [ -s "$base_licenses" ]; } && ! cmp -s "$base_licenses" "$head_licenses" 2>/dev/null; then
+            echo "::warning file=${prefix}.hagstone/licenses.json::This pull request changes the Hagstone license policy. The check used the base branch's version; the change takes effect after merge."
           fi
         fi
 

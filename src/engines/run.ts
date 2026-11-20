@@ -10,6 +10,8 @@ export interface RunOptions {
   cwd?: string;
   /** Kill the process after this long. Default: 20 minutes. */
   timeoutMs?: number;
+  /** Extra variables set on top of the allowlisted environment (e.g. a private TMPDIR). */
+  env?: Record<string, string>;
 }
 
 /**
@@ -48,7 +50,7 @@ export function run(cmd: string, args: string[], opts: RunOptions = {}): Promise
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, {
       cwd: opts.cwd,
-      env: engineEnv(),
+      env: { ...engineEnv(), ...opts.env },
       stdio: ["ignore", "pipe", "pipe"],
       timeout: opts.timeoutMs ?? 20 * 60_000,
       killSignal: "SIGKILL",

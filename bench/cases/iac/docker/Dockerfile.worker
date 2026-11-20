@@ -1,0 +1,9 @@
+# Safe: runs as the unprivileged node user.
+FROM node:22-slim
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY . .
+USER node
+HEALTHCHECK CMD node healthcheck.js
+CMD ["node", "worker.js"]

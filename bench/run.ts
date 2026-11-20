@@ -11,13 +11,15 @@ import { DEFAULT_IGNORES, isIgnored } from "../src/core/ignore.js";
 import { resolveEngine } from "../src/engines/install.js";
 import { runOpengrep } from "../src/engines/opengrep.js";
 import { runPkgrisk } from "../src/engines/pkgrisk/index.js";
+import { EMPTY_POLICY, runSyftLicenses } from "../src/engines/syft.js";
+import { runTrivy } from "../src/engines/trivy.js";
 import type { FetchLike } from "../src/engines/pkgrisk/registry.js";
 import { applyReachability } from "../src/reachability/index.js";
 
 const BENCH_DIR = fileURLToPath(new URL(".", import.meta.url));
 const CASES_DIR = join(BENCH_DIR, "cases");
 const RULES_DIR = join(BENCH_DIR, "..", "rules");
-const SOURCE_EXT = /\.(js|jsx|mjs|cjs|ts|tsx|py)$/;
+const SOURCE_EXT = /\.(js|jsx|mjs|cjs|ts|tsx|py|tf|ya?ml)$|^(Docker|Container)file(\..+)?$/;
 const LABEL = /(?:\/\/|#)\s*expect:\s*([a-z0-9-]+)/;
 
 interface Label {
@@ -48,7 +50,8 @@ async function loadLabels(files: string[]): Promise<Label[]> {
     const lines = (await readFile(join(CASES_DIR, path), "utf8")).split("\n");
     lines.forEach((text, i) => {
       const m = text.match(LABEL);
-      if (m?.[1]) labels.push({ ruleId: m[1], path, line: i + 2 });
+      // IaC check IDs (AWS-0107) are labeled in lowercase; compare case-insensitively.
+      if (m?.[1]) labels.push({ ruleId: m[1].toLowerCase(), path, line: i + 2 });
     });
   }
   return labels;
@@ -89,6 +92,18 @@ async function supplyChain(): Promise<{ expected: string[]; got: string[]; warni
   const out = await runPkgrisk(dir, DEFAULT_IGNORES, { fetch, now: () => now, sleep: async () => {}, cacheDir: undefined });
   const got = out.findings.map((f) => `${f.ruleId} ${f.dependency?.ecosystem} ${f.dependency?.name}`);
   return { expected: spec.expected, got, warnings: out.warnings };
+}
+
+/**
+ * bench/cases/licenses: syft offline (licenses come from the lockfiles) with the default policy.
+ * Expected findings live in expected.json as "<rule> <package>".
+ */
+async function licenses(): Promise<{ expected: string[]; got: string[]; warnings: string[] }> {
+  const dir = join(CASES_DIR, "licenses");
+  const spec = JSON.parse(await readFile(join(dir, "expected.json"), "utf8")) as { expected: string[] };
+  const bin = await resolveEngine("syft", { autoInstall: true });
+  const out = await runSyftLicenses(bin, dir, DEFAULT_IGNORES, { offline: true, policy: EMPTY_POLICY });
+  return { expected: spec.expected, got: out.findings.map((f) => `${f.ruleId} ${f.dependency?.name}`), warnings: out.warnings };
 }
 
 /**
@@ -146,6 +161,10 @@ async function main(): Promise<number> {
   const sibling = (f: Finding, l: Label) => f.cwe.some((c) => cwes.get(l.ruleId)?.includes(c));
   const bin = await resolveEngine("opengrep", { autoInstall: true });
   const { findings, warnings } = await runOpengrep(bin, CASES_DIR, DEFAULT_IGNORES);
+  // bench/cases/iac: Trivy with the default hardening filter, exactly as `hagstone scan` runs it.
+  const iac = await runTrivy(await resolveEngine("trivy", { autoInstall: true }), join(CASES_DIR, "iac"), DEFAULT_IGNORES);
+  findings.push(...iac.findings.map((f) => ({ ...f, location: { ...f.location, path: `iac/${f.location.path}` } })));
+  warnings.push(...iac.warnings);
 
   const perRule = new Map<string, Counts>();
   const bump = (rule: string, k: keyof Counts) => {
@@ -159,11 +178,11 @@ async function main(): Promise<number> {
   const bySibling: string[] = [];
   for (const f of findings) {
     const open = labels.filter((l) => !matched.has(l) && onLine(f, l));
-    const label = open.find((l) => l.ruleId === f.ruleId) ?? open.find((l) => sibling(f, l));
+    const label = open.find((l) => l.ruleId === f.ruleId.toLowerCase()) ?? open.find((l) => sibling(f, l));
     if (label) {
       matched.add(label);
       bump(f.ruleId, "tp");
-      if (label.ruleId !== f.ruleId) bySibling.push(`${label.path}:${label.line} ${label.ruleId} ← ${f.ruleId}`);
+      if (label.ruleId !== f.ruleId.toLowerCase()) bySibling.push(`${label.path}:${label.line} ${label.ruleId} ← ${f.ruleId}`);
     } else {
       bump(f.ruleId, "fp");
       falsePositives.push(`${f.location.path}:${f.location.startLine} ${f.ruleId}`);
@@ -174,6 +193,11 @@ async function main(): Promise<number> {
   const missedText = missed.map((l) => `${l.path}:${l.line} ${l.ruleId}`);
 
   const sc = await supplyChain();
+  const lic = await licenses();
+  // Scored with the supply-chain cases: "<rule> …" strings, rule first.
+  sc.expected.push(...lic.expected);
+  sc.got.push(...lic.got);
+  sc.warnings.push(...lic.warnings);
   let scTp = 0;
   for (const g of sc.got) {
     const rule = g.split(" ")[0] as string;

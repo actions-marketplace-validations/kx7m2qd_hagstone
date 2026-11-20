@@ -1,18 +1,21 @@
-import { relative, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { applyBaseline, BASELINE_FILE, defaultBaselinePath, loadBaseline, today, type BaselineSummary } from "./core/baseline.js";
 import { dedupe, sortFindings, type EngineName, type Finding } from "./core/finding.js";
 import { DEFAULT_IGNORES, isIgnored, loadIgnorePatterns } from "./core/ignore.js";
 import { pathScope } from "./core/scope.js";
 import { runGitleaks } from "./engines/gitleaks.js";
+import { runImageScan } from "./engines/grype.js";
 import { overrideVar, resolveEngine } from "./engines/install.js";
 import type { BinaryEngine } from "./engines/manifest.js";
 import { runOpengrep } from "./engines/opengrep.js";
 import { runOsv } from "./engines/osv.js";
 import { runPkgrisk } from "./engines/pkgrisk/index.js";
+import { LICENSE_POLICY_FILE, loadLicensePolicy, runSyftLicenses } from "./engines/syft.js";
+import { runTrivy } from "./engines/trivy.js";
 import type { EngineOutput } from "./engines/types.js";
 import { applyReachability } from "./reachability/index.js";
 
-export const ALL_ENGINES: EngineName[] = ["opengrep", "osv-scanner", "gitleaks", "pkgrisk"];
+export const ALL_ENGINES: EngineName[] = ["opengrep", "osv-scanner", "gitleaks", "pkgrisk", "trivy", "syft"];
 
 export interface ScanOptions {
   engines?: EngineName[];
@@ -27,6 +30,13 @@ export interface ScanOptions {
   ignoreFile?: string;
   /** Report code and dependency findings in test and example paths too (default: hidden and counted). */
   includeTests?: boolean;
+  /**
+   * License policy to apply instead of `<root>/.hagstone/licenses.json` (missing or empty file →
+   * defaults only). CI passes the base branch's copy so a PR can't allow the license it adds.
+   */
+  licensePolicy?: string;
+  /** Report IaC hardening checks too (LOW and config/iac-hardening.json; default: hidden and counted). */
+  includeHardening?: boolean;
   /** Baseline file to apply instead of `<root>/.hagstone/baseline.json` (missing file → none). */
   baseline?: string;
   /** Don't apply any baseline: report every finding. */
@@ -71,7 +81,7 @@ export interface ScanResult {
  */
 export function hiddenByScope(f: Finding): boolean {
   if (!f.scope) return false;
-  if (f.category === "code") return true;
+  if (f.category === "code" || f.category === "iac" || f.category === "license") return true;
   return f.category === "dependency" && f.engine === "osv-scanner" && f.ruleId !== "pkg-known-malicious";
 }
 
@@ -81,10 +91,21 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
   const engines = opts.engines ?? ALL_ENGINES;
   const autoInstall = opts.autoInstall ?? true;
 
-  const runners: Record<BinaryEngine, (bin: string) => Promise<EngineOutput>> = {
+  const policyPath = opts.licensePolicy ? resolve(opts.licensePolicy) : join(root, LICENSE_POLICY_FILE);
+  const license = engines.includes("syft") ? await loadLicensePolicy(policyPath) : undefined;
+
+  const runners: Partial<Record<BinaryEngine, (bin: string) => Promise<EngineOutput>>> = {
     opengrep: (bin) => runOpengrep(bin, root, ignores),
     "osv-scanner": (bin) => runOsv(bin, root),
     gitleaks: (bin) => runGitleaks(bin, root),
+    syft: (bin) => runSyftLicenses(bin, root, ignores, { offline: opts.offline ?? false, policy: license!.policy }),
+    trivy: (bin) => runTrivy(bin, root, ignores, { includeHardening: opts.includeHardening ?? false }),
+  };
+
+  const runnerFor = (engine: BinaryEngine) => {
+    const r = runners[engine];
+    if (!r) throw new Error(`${engine} doesn't scan a directory`);
+    return r;
   };
 
   // Engines run in parallel; one failing engine must not hide the others' results.
@@ -96,7 +117,7 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
         const out =
           engine === "pkgrisk"
             ? await runPkgrisk(root, ignores, { offline: opts.offline ?? false })
-            : await runners[engine](await resolveEngine(engine, { autoInstall }));
+            : await runnerFor(engine)(await resolveEngine(engine, { autoInstall }));
         return { engine, out, ms: Date.now() - started };
       } catch (e) {
         return { engine, error: e instanceof Error ? e.message : String(e), ms: Date.now() - started };
@@ -111,6 +132,7 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
     const v = overrideVar(engine);
     if (process.env[v]) warnings.push(`${engine}: using ${v}=${process.env[v]}, which is not checksum-verified`);
   }
+  if (license?.error) warnings.push(`license policy ${relative(root, policyPath) || policyPath} not applied (${license.error}); using the defaults`);
   const statuses: EngineStatus[] = [];
   for (const o of outcomes) {
     if ("error" in o) {
@@ -181,6 +203,69 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
     warnings,
     engines: statuses,
     hiddenInTests,
+    ...(suppressed ? { suppressed } : {}),
+    ...(baseline ? { baseline } : {}),
+  };
+}
+
+export interface ImageScanOptions {
+  autoInstall?: boolean;
+  /** Use the cached vulnerability database; don't download or update it. */
+  offline?: boolean;
+  /** Baseline to apply (an image has no repo root, so there is no default one). */
+  baseline?: string;
+}
+
+/**
+ * Scan a container image: syft catalogs it, grype matches the catalog against its vulnerability
+ * database. One finding per source package version, like dependency findings for a directory.
+ */
+export async function scanImage(image: string, opts: ImageScanOptions = {}): Promise<ScanResult> {
+  const autoInstall = opts.autoInstall ?? true;
+  const started = Date.now();
+  const warnings: string[] = [];
+  for (const engine of ["syft", "grype"] as const) {
+    const v = overrideVar(engine);
+    if (process.env[v]) warnings.push(`${engine}: using ${v}=${process.env[v]}, which is not checksum-verified`);
+  }
+  let findings: Finding[] = [];
+  let engines: EngineStatus[];
+  try {
+    const bins = { syft: await resolveEngine("syft", { autoInstall }), grype: await resolveEngine("grype", { autoInstall }) };
+    const out = await runImageScan(bins, image, { offline: opts.offline ?? false });
+    findings = dedupe(out.findings);
+    warnings.push(...out.warnings);
+    engines = [{ engine: "grype", ok: true, findings: findings.length, ms: Date.now() - started }];
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    warnings.push(`image scan failed: ${error}`);
+    engines = [{ engine: "grype", ok: false, findings: 0, ms: Date.now() - started, error }];
+  }
+
+  let suppressed: Finding[] | undefined;
+  let baseline: BaselineSummary | undefined;
+  if (opts.baseline) {
+    const { file, error } = await loadBaseline(resolve(opts.baseline));
+    if (error) warnings.push(`baseline ${opts.baseline} not applied (${error}), so every finding is shown`);
+    else if (file) {
+      const a = applyBaseline(findings, [], file, today());
+      findings = a.active;
+      suppressed = sortFindings(a.suppressed);
+      // Image findings never cover a repo's code entries, so nothing can be called stale.
+      baseline = {
+        file: opts.baseline,
+        baselined: a.suppressed.filter((f) => f.suppression?.kind === "baseline").length,
+        suppressed: a.suppressed.filter((f) => f.suppression?.kind !== "baseline").length,
+        resurfaced: a.resurfaced,
+      };
+    }
+  }
+  return {
+    root: image,
+    findings: sortFindings(findings),
+    ignores: [],
+    warnings,
+    engines,
     ...(suppressed ? { suppressed } : {}),
     ...(baseline ? { baseline } : {}),
   };

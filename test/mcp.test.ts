@@ -178,7 +178,7 @@ describe("scan tool", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.target).not.toBe(dir);
     expect(calls[0]!.files).toEqual(["a.js", "new.py"]);
-    expect(calls[0]!.opts.engines).toEqual(["opengrep", "gitleaks"]);
+    expect(calls[0]!.opts.engines).toEqual(["opengrep", "gitleaks", "trivy"]);
     expect(calls[0]!.opts.ignoreFile).toBe(join(dir, ".hagstoneignore"));
     await expect(readdir(calls[0]!.target)).rejects.toThrow(); // temp copy removed
 
@@ -195,8 +195,8 @@ describe("scan tool", () => {
     await writeFile(join(dir, "package.json"), '{"dependencies":{}}');
     const { body, calls } = await scanVia(dir, { offline: true });
     expect(calls.map((c) => [c.target === dir, c.opts.engines])).toEqual([
-      [false, ["opengrep", "gitleaks"]],
-      [true, ["osv-scanner", "pkgrisk"]],
+      [false, ["opengrep", "gitleaks", "trivy"]],
+      [true, ["osv-scanner", "pkgrisk", "syft"]],
     ]);
     expect(calls[1]!.opts.offline).toBe(true);
     expect(body.warnings[0]).toMatch(/dependency manifest changed/);

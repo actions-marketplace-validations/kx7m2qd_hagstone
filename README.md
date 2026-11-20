@@ -1,10 +1,10 @@
 # Hagstone
 
-Local-first application security scanner. One command runs SAST, dependency vulnerability, secret and
-supply-chain checks, and reports everything as a single list of findings.
+Local-first application security scanner. One command runs SAST, dependency vulnerability, secret,
+supply-chain, infrastructure-as-code and license checks, and reports everything as a single list of findings.
 
-Your source code never leaves your machine or CI runner. The supply-chain checks send package names
-and versions to npm and PyPI and nothing else, and `--offline` turns those lookups off too.
+Your source code never leaves your machine or CI runner. The supply-chain and license checks send package
+names and versions to npm and PyPI and nothing else, and `--offline` turns those lookups off too.
 
 - **Code:** taint-aware [Opengrep](https://github.com/opengrep/opengrep) rules for JavaScript/TypeScript
   and Python. Every rule ships with tests and maps to a CWE and an OWASP category.
@@ -13,6 +13,20 @@ and versions to npm and PyPI and nothing else, and `--offline` turns those looku
 - **Secrets:** [Gitleaks](https://github.com/gitleaks/gitleaks). Secret values are redacted from every
   report.
 - **Supply chain:** typosquats, install scripts, known-malicious packages.
+- **Infrastructure as code:** Terraform, Kubernetes, Dockerfile, Helm, CloudFormation, ARM and Ansible
+  via [Trivy](https://github.com/aquasecurity/trivy)'s built-in checks. Only things that expose
+  something are reported (a public bucket, SSH open to the internet, a privileged container); the
+  best-practice hardening checks are counted, and `--include-hardening` shows them. Inline
+  `trivy:ignore` comments in the scanned repo are not honoured, and remote Terraform modules are
+  never downloaded.
+- **Licenses and SBOM:** [Syft](https://github.com/anchore/syft) catalogs the shipped dependencies.
+  AGPL/SSPL, GPL and non-commercial licenses are reported (`A OR B` is fine if either option is);
+  `.hagstone/licenses.json` (`{"allow": [...], "deny": [...]}`) adjusts that. `hagstone sbom` writes a
+  CycloneDX or SPDX SBOM.
+- **Container images:** `hagstone scan --image <ref>`. Syft catalogs the image and
+  [Grype](https://github.com/anchore/grype) matches it: one finding per source package to upgrade
+  (`openssl (libcrypto3, libssl3)`), not one per CVE per binary. The first image scan downloads
+  Grype's vulnerability database (several GB on disk, cached); `--offline` uses the cached copy.
 
 Engine binaries are pinned by version and SHA-256, and Hagstone checks them on every run.
 
@@ -35,6 +49,8 @@ Linux x64 and macOS arm64.
 ```sh
 hagstone scan [path]                 # text report; exits 1 on findings at or above --fail-on (default: high)
 hagstone scan --format sarif --output hagstone.sarif
+hagstone scan --image ghcr.io/org/app:1.2   # container image (registry, docker:, oci-archive:)
+hagstone sbom --output sbom.cdx.json # CycloneDX SBOM (--format spdx for SPDX); --image for an image
 hagstone hook install                # pre-commit hook: scans staged changes for code issues and secrets
 hagstone mcp                         # MCP server for coding agents (scan, explain, check_package)
 hagstone --help                      # every flag

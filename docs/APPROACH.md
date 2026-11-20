@@ -72,9 +72,9 @@ platforms are strongest). The product goal is global either way.
 | Dependency vulnerabilities (SCA) + reachability | ✅ | OSV-Scanner |
 | Secrets | ✅ | Gitleaks |
 | Supply chain (malicious, typosquat, install scripts) | ✅ | pkgrisk (ours) |
-| Infrastructure as code (Terraform, Kubernetes, Dockerfile) | ❌ | Checkov or KICS |
-| Container images | ❌ | Trivy or Grype |
-| SBOM (CycloneDX / SPDX), license compliance | ❌ | Syft |
+| Infrastructure as code (Terraform, Kubernetes, Dockerfile, Helm, CloudFormation) | ✅ exposures only; hardening hidden | Trivy (Apache-2.0; KICS/Checkov can't be pinned) |
+| Container images | ✅ CLI (`--image`); not yet an Action input | Syft → Grype (Apache-2.0) |
+| SBOM (CycloneDX / SPDX), license compliance | ✅ | Syft (Apache-2.0) |
 | DAST: running web apps | ❌ | ZAP + Nuclei |
 | API security (OpenAPI-driven) | ❌ | ZAP |
 | Access-control testing (multi-role IDOR) | ❌ | ours |
@@ -107,7 +107,9 @@ platforms are strongest). The product goal is global either way.
       ├─ engines/osv        → lockfiles (SCA)             │
       ├─ engines/gitleaks   → secrets                     │
       ├─ engines/pkgrisk    → supply chain                ├─ normalize → Finding[] → scope / ignore / dedupe
-      ├─ (planned) IaC, containers, SBOM + licenses       │        → reachability → baseline
+      ├─ engines/trivy      → IaC (sanitized copy)        │
+      ├─ engines/syft       → licenses; `hagstone sbom`   │
+      ├─ engines/grype      → `scan --image` (Syft → Grype)│        → reachability → baseline
       │                                                   │                  │
  hagstone dast <url>  (planned; running app in the        │                  ├─ correlate (DAST ↔ SAST)
       └─ ZAP, Nuclei, access-control agent  customer's CI)┘                  ├─ report: text / json / sarif / PR
@@ -184,9 +186,15 @@ Design (agreed 2026-11-18): one committed file (`.hagstone/baseline.json`) holdi
      redacted excerpt. No author field (git blame has it; keeps personal data out). Pretty JSON,
      entries sorted by fingerprint, for readable diffs and few merge conflicts.
 
-**Step 2 — IaC, containers, SBOM + licenses.** Checkov or KICS (Terraform, Kubernetes, Dockerfile),
-Trivy or Grype (container images), Syft (CycloneDX / SPDX SBOM, license compliance; later VEX,
-AI-BOM and Cosign signing). Each: pinned + verified, normalized into `Finding`, benchmark cases.
+**Step 2 — IaC, containers, SBOM + licenses.** Spec `docs/specs/iac-containers-sbom.md` (engines chosen
+2026-11-20 after the license + pinning check). IaC via Trivy ✓ built 2026-11-20 (exposures reported,
+hardening hidden, repo can't silence checks or trigger module downloads; bench cases in
+`bench/cases/iac/`). Licenses + SBOM via Syft ✓ built 2026-11-20 (`.hagstone/licenses.json` policy,
+base-branch copy in the Action; `hagstone sbom`; later VEX, AI-BOM and Cosign signing). Container
+images via Syft → Grype ✓ built 2026-11-20 (`hagstone scan --image`; one finding per source package;
+osv-scanner on a Syft SBOM was tried and missed openssl/zlib on Alpine). Open: an `image` Action input
+(check-run annotations need repo paths), a pinned-image recall bench (needs network + Grype's DB). Each: pinned + verified, normalized into
+`Finding`, benchmark cases.
 
 **Step 3 — SAST depth.**
 - Languages, in order: **Java** (Spring, eGovFrame; gate on the OWASP Benchmark for Java), **Go**,

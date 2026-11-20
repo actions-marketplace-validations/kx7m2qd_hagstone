@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
+import { resolve as resolvePath } from "node:path";
 import { parseArgs } from "node:util";
 import { itemsFromSarif, report } from "./action/github.js";
 import { baselineCreate, baselinePrune, suppress, type CommandResult } from "./commands/baseline.js";
@@ -7,6 +8,8 @@ import { gateSeverity, SEVERITY_ORDER, severityAtLeast, type EngineName, type Se
 import { enginePath, installEngine, isInstalled, resolveEngine } from "./engines/install.js";
 import { BINARY_ENGINES, ENGINES } from "./engines/manifest.js";
 import { RULES_DIR } from "./engines/opengrep.js";
+import { runSyft, type SbomFormat } from "./engines/syft.js";
+import { loadIgnorePatterns } from "./core/ignore.js";
 import { run } from "./engines/run.js";
 import { install, uninstall } from "./hook/install.js";
 import { hookRun } from "./hook/run.js";
@@ -14,13 +17,13 @@ import { serve } from "./mcp/protocol.js";
 import { createTools, INSTRUCTIONS } from "./mcp/tools.js";
 import { toSarif } from "./report/sarif.js";
 import { toText } from "./report/text.js";
-import { ALL_ENGINES, scan } from "./scan.js";
+import { ALL_ENGINES, scan, scanImage, type ScanResult } from "./scan.js";
 import { TOOL_NAME, TOOL_VERSION } from "./version.js";
 
 const HELP = `${TOOL_NAME} ${TOOL_VERSION} — local-first application security scanner
 
 Usage:
-  ${TOOL_NAME} scan [path]          Scan code, dependencies and secrets (default path: .)
+  ${TOOL_NAME} scan [path]          Scan code, dependencies, secrets, IaC and licenses (default path: .)
       --format text|json|sarif     Output format (default: text)
       --output <file>              Write the report to a file instead of stdout
       --fail-on <severity|none>    Exit 1 if a finding is at least this severe (default: high)
@@ -38,15 +41,31 @@ Usage:
       --include-tests              Also report code and dependency findings in test and example code
                                    (test/, __tests__/, e2e/, examples/, *.spec.ts, test_*.py, ...).
                                    Hidden by default; secrets and malicious packages are always shown.
+      --include-hardening          Also report IaC hardening checks (Trivy LOW and best-practice checks
+                                   that expose nothing on their own). Hidden and counted by default.
       --ignore-file <file>         Read ignore patterns from this file instead of <path>/.hagstoneignore
                                    (CI: pass the base branch's copy so a PR can't un-scan its own code)
       --baseline <file>            Apply this baseline instead of <path>/.hagstone/baseline.json
                                    (CI: pass the base branch's copy so a PR can't hide its own findings)
       --no-baseline                Ignore the baseline: report and gate on every finding
+      --image <ref>                Scan a container image instead of a directory (alpine:3.20,
+                                   registry:ghcr.io/org/app:1.2, docker:app:dev, oci-archive:app.tar).
+                                   Syft catalogs it, Grype matches it; one finding per source package.
+                                   The first image scan downloads Grype's vulnerability database
+                                   (several GB, cached; --offline uses the cached copy). Takes
+                                   --format, --output, --fail-on, --baseline and --offline.
+      --license-policy <file>      Apply this license policy instead of <path>/.hagstone/licenses.json
+                                   ({"allow": [...], "deny": [...]}; CI: pass the base branch's copy).
+                                   Default: AGPL/SSPL (high), GPL (medium), non-commercial (high).
 
   pkgrisk (dependency supply-chain checks) sends package names and versions, nothing else, to
-  registry.npmjs.org and pypi.org (osv-scanner already sends the same to osv.dev). Source code, file
-  paths and manifest contents never leave your machine. Use --offline to send nothing.
+  registry.npmjs.org and pypi.org (osv-scanner already sends the same to osv.dev), and syft looks up
+  Python package licenses on pypi.org. Source code, file paths and manifest contents never leave
+  your machine. Use --offline to send nothing.
+
+  ${TOOL_NAME} sbom [path] [--image <ref>] [--format cyclonedx|spdx] [--output <file>] [--offline]
+                                    Write an SBOM of the project's shipped dependencies, or of an
+                                    image (Syft; CycloneDX JSON by default, or SPDX JSON).
 
   ${TOOL_NAME} baseline create [path] [--force]
                                     Snapshot every current finding into .hagstone/baseline.json (commit
@@ -117,8 +136,11 @@ async function cmdScan(args: string[]): Promise<number> {
       "trust-reachability": { type: "boolean", default: false },
       "ignore-file": { type: "string" },
       "include-tests": { type: "boolean", default: false },
+      "include-hardening": { type: "boolean", default: false },
       baseline: { type: "string" },
       "no-baseline": { type: "boolean", default: false },
+      "license-policy": { type: "string" },
+      image: { type: "string" },
     },
   });
   const format = values.format;
@@ -126,17 +148,22 @@ async function cmdScan(args: string[]): Promise<number> {
   const failOn = values["fail-on"];
   if (failOn !== "none" && !SEVERITY_ORDER.includes(failOn as Severity)) fail(`unknown severity "${failOn}"`);
 
-  const result = await scan(positionals[0] ?? ".", {
-    engines: parseEngines(values.engines),
-    autoInstall: !values["no-install"],
-    offline: values.offline,
-    reachability: !values["no-reachability"],
-    reachableOnly: values["reachable-only"],
-    ignoreFile: values["ignore-file"],
-    includeTests: values["include-tests"],
-    baseline: values.baseline,
-    noBaseline: values["no-baseline"],
-  });
+  if (values.image && positionals.length) fail("pass either a path or --image, not both");
+  const result: ScanResult = values.image
+    ? await scanImage(values.image, { autoInstall: !values["no-install"], offline: values.offline, baseline: values.baseline })
+    : await scan(positionals[0] ?? ".", {
+        engines: parseEngines(values.engines),
+        autoInstall: !values["no-install"],
+        offline: values.offline,
+        reachability: !values["no-reachability"],
+        reachableOnly: values["reachable-only"],
+        ignoreFile: values["ignore-file"],
+        includeTests: values["include-tests"],
+        includeHardening: values["include-hardening"],
+        baseline: values.baseline,
+        noBaseline: values["no-baseline"],
+        licensePolicy: values["license-policy"],
+      });
 
   const report =
     format === "json"
@@ -160,6 +187,33 @@ async function cmdScan(args: string[]): Promise<number> {
   if (result.engines.some((e) => !e.ok)) return 2;
   const trust = values["trust-reachability"];
   if (failOn !== "none" && result.findings.some((f) => severityAtLeast(gateSeverity(f, trust), failOn as Severity))) return 1;
+  return 0;
+}
+
+async function cmdSbom(args: string[]): Promise<number> {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      format: { type: "string", default: "cyclonedx" },
+      output: { type: "string" },
+      offline: { type: "boolean", default: false },
+      "no-install": { type: "boolean", default: false },
+      image: { type: "string" },
+    },
+  });
+  const format = values.format as SbomFormat;
+  if (format !== "cyclonedx" && format !== "spdx") fail(`unknown SBOM format "${values.format}" (cyclonedx or spdx)`);
+  if (positionals.length > 1 || (values.image && positionals.length))
+    fail(`usage: ${TOOL_NAME} sbom [path] [--image <ref>] [--format cyclonedx|spdx] [--output <file>] [--offline]`);
+  const root = resolvePath(positionals[0] ?? ".");
+  const bin = await resolveEngine("syft", { autoInstall: !values["no-install"] });
+  const ignores = values.image ? [] : await loadIgnorePatterns(root);
+  const sbom = await runSyft(bin, root, ignores, { format, offline: values.offline, image: values.image });
+  if (values.output) {
+    await writeFile(values.output, sbom);
+    process.stderr.write(`${TOOL_NAME}: wrote a ${format === "cyclonedx" ? "CycloneDX" : "SPDX"} SBOM to ${values.output}\n`);
+  } else await writeStdout(sbom);
   return 0;
 }
 
@@ -313,6 +367,8 @@ async function main(argv: string[]): Promise<number> {
   switch (command) {
     case "scan":
       return cmdScan(rest);
+    case "sbom":
+      return cmdSbom(rest);
     case "engines":
       return cmdEngines(rest);
     case "baseline":

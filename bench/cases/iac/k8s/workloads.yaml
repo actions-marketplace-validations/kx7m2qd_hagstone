@@ -1,0 +1,54 @@
+# Exposed: a privileged agent on the host network.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-agent
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels: { app: node-agent }
+  template:
+    metadata:
+      labels: { app: node-agent }
+    spec:
+      # expect: ksv-0009
+      hostNetwork: true
+      containers:
+        - name: agent
+          image: registry.example.com/node-agent:1.4.2
+          securityContext:
+            # expect: ksv-0017
+            privileged: true
+            runAsNonRoot: true
+            runAsUser: 10001
+---
+# Safe: a hardened web deployment.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: shop
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: web }
+  template:
+    metadata:
+      labels: { app: web }
+    spec:
+      securityContext:
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: web
+          image: registry.example.com/web:2.3.0
+          ports: [{ containerPort: 8080 }]
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }

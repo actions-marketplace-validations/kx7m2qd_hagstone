@@ -1,0 +1,31 @@
+name: Engine signatures
+
+# Verify every pinned engine binary against its upstream Sigstore signature or SLSA provenance
+# (src/engines/manifest.ts `provenance`) whenever the pins change. Runs only here, not in the
+# product: at run time Hagstone enforces the pinned SHA-256s this job vouches for.
+on:
+  push:
+    branches: [main]
+    paths: [src/engines/manifest.ts, scripts/verify-signatures.ts, .github/workflows/engine-signatures.yml]
+  pull_request:
+    paths: [src/engines/manifest.ts, scripts/verify-signatures.ts, .github/workflows/engine-signatures.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+      - uses: slsa-framework/slsa-verifier/actions/installer@ea584f4502babc6f60d9bc799dbbb13c1caa9ee6 # v2.7.1
+      - run: npm ci --no-audit --no-fund --ignore-scripts
+      - run: npm run verify:engines

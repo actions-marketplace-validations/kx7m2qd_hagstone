@@ -1,0 +1,61 @@
+rules:
+  - id: java-weak-random
+    languages: [java]
+    severity: WARNING
+    message: >-
+      A cookie, session value, token or other secret is generated with `java.util.Random` or
+      `Math.random()`. Their output is predictable from a few observed values, so an attacker can
+      forge sessions, reset links or remember-me tokens. Use `java.security.SecureRandom` (for
+      example `new SecureRandom().nextBytes(buf)` then Base64-encode).
+    metadata:
+      title: Insecure randomness for a security value
+      cwe: ["CWE-330: Use of Insufficiently Random Values"]
+      owasp: ["A02:2021 - Cryptographic Failures"]
+      confidence: medium
+      severity: medium
+    mode: taint
+    pattern-sources:
+      - pattern: new java.util.Random(...).$M(...)
+      - pattern: new Random(...).$M(...)
+      # A variable typed Random may hold a SecureRandom; a Random parameter is the caller's choice.
+      - patterns:
+          - pattern: (java.util.Random $R).$M(...)
+          - pattern-not-inside: |
+              $T $R = java.security.SecureRandom.getInstance(...);
+              ...
+          - pattern-not-inside: |
+              $T $R = SecureRandom.getInstance(...);
+              ...
+          - pattern-not-inside: |
+              $T $R = new java.security.SecureRandom(...);
+              ...
+          - pattern-not-inside: |
+              $T $R = new SecureRandom(...);
+              ...
+          - pattern-not-inside: $RET $F(..., $PT $R, ...) { ... }
+      # nextBytes fills the array it is given.
+      - by-side-effect: true
+        patterns:
+          - pattern-either:
+              - pattern: new java.util.Random(...).nextBytes($BUF)
+              - pattern: new Random(...).nextBytes($BUF)
+          - focus-metavariable: $BUF
+      - pattern: java.lang.Math.random()
+      - pattern: Math.random()
+      - pattern: java.util.concurrent.ThreadLocalRandom.current().$M(...)
+      - pattern: ThreadLocalRandom.current().$M(...)
+      - pattern: org.apache.commons.lang.RandomStringUtils.$M(...)
+      - pattern: org.apache.commons.lang3.RandomStringUtils.$M(...)
+      - pattern: RandomStringUtils.$M(...)
+    pattern-sinks:
+      - pattern: new javax.servlet.http.Cookie(...)
+      - pattern: new jakarta.servlet.http.Cookie(...)
+      - pattern: new Cookie(...)
+      - pattern: $SESSION.setAttribute(...)
+      - pattern: $RESP.setHeader(...)
+      - pattern: $RESP.addHeader(...)
+      - patterns:
+          - pattern: $X.$SET(...)
+          - metavariable-regex:
+              metavariable: $SET
+              regex: (?i)^set\w*(token|secret|password|passwd|otp|nonce|salt|apikey|sessionid|csrf)\w*$

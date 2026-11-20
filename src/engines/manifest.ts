@@ -15,10 +15,27 @@ export interface Artifact {
   archive?: { type: "tar.gz"; member: string; sha256: string };
 }
 
+/**
+ * How the upstream release proves where its files came from. Checked by `npm run verify:engines`
+ * (scripts/verify-signatures.ts, CI workflow engine-signatures.yml) whenever this file changes, not at
+ * run time: the pinned SHA-256 is what every run enforces. `commit` is the release tag's commit; the
+ * signing certificate must name it, so a signature made from any other source is rejected.
+ */
+export type Provenance =
+  /** A checksums file signed with a Sigstore bundle; every artifact's hash must be listed in it. */
+  | { kind: "sigstore-checksums"; checksums: string; bundle: string; identity: string; commit: string }
+  /** Each artifact signed on its own: `<url>.sig` + `<url>.cert` (cosign sign-blob). */
+  | { kind: "sigstore-blob"; identity: string; commit: string }
+  /** SLSA provenance from slsa-github-generator, checked with slsa-verifier. */
+  | { kind: "slsa"; provenance: string; source: string; tag: string }
+  /** Nothing signed upstream: only the (unsigned) published checksums are compared. */
+  | { kind: "unsigned"; checksums: string };
+
 export interface EngineSpec {
   version: string;
   binary: string;
   artifacts: Partial<Record<Platform, Artifact>>;
+  provenance: Provenance;
 }
 
 /**
@@ -26,21 +43,22 @@ export interface EngineSpec {
  * upstream checksum/signature, then update both the version and the sha256 here.
  *
  * osv-scanner and gitleaks hashes match their published checksum files.
- * Opengrep publishes Sigstore signatures (.sig/.cert) instead of checksums; its
- * hashes match the asset digests GitHub reports for the release (checked
- * 2026-10-22). TODO: also verify with `cosign verify-blob` before the first
- * public release (docs/SECURITY.md).
+ * Signatures and provenance (`provenance` below) are verified by `npm run verify:engines` in CI
+ * (.github/workflows/engine-signatures.yml) on every change to this file. Gitleaks publishes no
+ * signature, only a checksums file.
  *
- * trivy, syft and grype hashes match their published checksum files; each checksum file's
- * Sigstore bundle signs that same digest and has a transparency-log entry (checked 2026-11-20;
- * trivy's certificate names its own release workflow at the pinned tag). Trivy's release
- * pipeline was compromised in March 2026 (CVE-2026-33634, malicious v0.69.4): never bump trivy
- * without checking the release against its advisories. TODO: `cosign verify-blob` all three.
+ * Trivy's release pipeline was compromised in March 2026 (CVE-2026-33634, malicious v0.69.4):
+ * never bump trivy without checking the release against its advisories.
  */
 export const ENGINES: Record<BinaryEngine, EngineSpec> = {
   opengrep: {
     version: "1.30.1",
     binary: "opengrep",
+    provenance: {
+      kind: "sigstore-blob",
+      identity: "https://github.com/opengrep/opengrep/.github/workflows/rolling-release.yml@refs/heads/release-v1.30.1",
+      commit: "525e67142af506e2f3ea1728d18c5824813f0248",
+    },
     artifacts: {
       "darwin-arm64": {
         url: "https://github.com/opengrep/opengrep/releases/download/v1.30.1/opengrep_osx_arm64",
@@ -55,6 +73,12 @@ export const ENGINES: Record<BinaryEngine, EngineSpec> = {
   "osv-scanner": {
     version: "2.6.0",
     binary: "osv-scanner",
+    provenance: {
+      kind: "slsa",
+      provenance: "https://github.com/google/osv-scanner/releases/download/v2.6.0/multiple.intoto.jsonl",
+      source: "github.com/google/osv-scanner",
+      tag: "v2.6.0",
+    },
     artifacts: {
       "darwin-arm64": {
         url: "https://github.com/google/osv-scanner/releases/download/v2.6.0/osv-scanner_darwin_arm64",
@@ -69,6 +93,7 @@ export const ENGINES: Record<BinaryEngine, EngineSpec> = {
   gitleaks: {
     version: "8.30.1",
     binary: "gitleaks",
+    provenance: { kind: "unsigned", checksums: "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_checksums.txt" },
     artifacts: {
       "darwin-arm64": {
         url: "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_darwin_arm64.tar.gz",
@@ -93,6 +118,13 @@ export const ENGINES: Record<BinaryEngine, EngineSpec> = {
   trivy: {
     version: "0.76.2",
     binary: "trivy",
+    provenance: {
+      kind: "sigstore-checksums",
+      checksums: "https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_checksums.txt",
+      bundle: "https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_checksums.txt.sigstore.json",
+      identity: "https://github.com/aquasecurity/trivy/.github/workflows/reusable-release.yaml@refs/tags/v0.76.2",
+      commit: "3f6334d223b52188324af3b9923b4249cd206652",
+    },
     artifacts: {
       "darwin-arm64": {
         url: "https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_macOS-ARM64.tar.gz",
@@ -109,6 +141,14 @@ export const ENGINES: Record<BinaryEngine, EngineSpec> = {
   syft: {
     version: "1.57.2",
     binary: "syft",
+    provenance: {
+      kind: "sigstore-checksums",
+      checksums: "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_checksums.txt",
+      bundle: "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_checksums.txt.sigstore.json",
+      // Anchore releases from a manual run on main; the commit pins it to the v1.57.2 tag.
+      identity: "https://github.com/anchore/syft/.github/workflows/release.yaml@refs/heads/main",
+      commit: "1a72047fd46c72e0a12ee77e24b23d2316753d08",
+    },
     artifacts: {
       "darwin-arm64": {
         url: "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_darwin_arm64.tar.gz",
@@ -125,6 +165,13 @@ export const ENGINES: Record<BinaryEngine, EngineSpec> = {
   grype: {
     version: "0.122.1",
     binary: "grype",
+    provenance: {
+      kind: "sigstore-checksums",
+      checksums: "https://github.com/anchore/grype/releases/download/v0.122.1/grype_0.122.1_checksums.txt",
+      bundle: "https://github.com/anchore/grype/releases/download/v0.122.1/grype_0.122.1_checksums.txt.sigstore.json",
+      identity: "https://github.com/anchore/grype/.github/workflows/release.yaml@refs/heads/main",
+      commit: "8f3ddeddc4a4ed6314248aaf0a7c510f98db8882",
+    },
     artifacts: {
       "darwin-arm64": {
         url: "https://github.com/anchore/grype/releases/download/v0.122.1/grype_0.122.1_darwin_arm64.tar.gz",

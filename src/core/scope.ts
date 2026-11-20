@@ -10,12 +10,14 @@ const TEST_DIR = /^(?:__)?(?:tests?|specs?|testing|e2e|fixtures?|mocks?|testdata
 /** Test files outside a test directory. */
 const TEST_FILE =
   /\.(?:test|spec|e2e|cy|stories|story)\.[cm]?[jt]sx?$|^test_.*\.py$|_test\.py$|^conftest\.py$|^tests?\.py$/i;
+/** JVM test classes by naming convention (`UserServiceTest`, `OrderIT`, `TestUtils`). Case-sensitive, so `Contest.java` isn't one. */
+const JVM_TEST_FILE = /[a-z0-9](?:Test|Tests|TestCase|IT|ITCase)\.(?:java|kt)$|^Test[A-Z]\w*\.(?:java|kt)$/;
 const EXAMPLE_DIR = /^(?:examples?|samples?|demos?|playground)$/i;
 
 export function pathScope(relPath: string): PathScope {
   const segments = relPath.replace(/\\/g, "/").replace(/^\.\//, "").split("/");
   const file = segments.pop() ?? "";
-  if (segments.some((s) => TEST_DIR.test(s)) || TEST_FILE.test(file)) return "test";
+  if (segments.some((s) => TEST_DIR.test(s)) || TEST_FILE.test(file) || JVM_TEST_FILE.test(file)) return "test";
   if (segments.some((s) => EXAMPLE_DIR.test(s))) return "example";
   return "prod";
 }

@@ -1,0 +1,24 @@
+rules:
+  - id: java-weak-cipher
+    languages: [java]
+    severity: ERROR
+    message: >-
+      This cipher is broken or misused: DES, 3DES, RC2, RC4 and Blowfish have small keys or
+      blocks, and ECB mode (also the default for a bare `"AES"`) encrypts equal blocks to equal
+      output, leaking patterns. Use `AES/GCM/NoPadding` with a random 12-byte IV per message, or
+      ChaCha20-Poly1305.
+    metadata:
+      title: Weak or broken cipher
+      cwe: ["CWE-327: Use of a Broken or Risky Cryptographic Algorithm"]
+      owasp: ["A02:2021 - Cryptographic Failures"]
+      confidence: high
+      severity: high
+    patterns:
+      - pattern-either:
+          - pattern: javax.crypto.Cipher.getInstance("$ALG", ...)
+          - pattern: Cipher.getInstance("$ALG", ...)
+          - pattern: new javax.crypto.spec.SecretKeySpec($KEY, "$ALG")
+          - pattern: new SecretKeySpec($KEY, "$ALG")
+      - metavariable-regex:
+          metavariable: $ALG
+          regex: (?i)^((des|desede|tripledes|3des|rc2|rc4|arcfour|blowfish)(/.*)?|aes|(?!rsa)[^/]+/ecb(/.*)?)$

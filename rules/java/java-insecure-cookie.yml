@@ -1,0 +1,38 @@
+rules:
+  - id: java-insecure-cookie
+    languages: [java]
+    severity: WARNING
+    message: >-
+      This cookie is sent without the Secure flag, so the browser also sends it over plain HTTP,
+      where anyone on the network can read it. Call `cookie.setSecure(true)` (and
+      `setHttpOnly(true)` unless JavaScript must read it), or
+      `ResponseCookie.from(...).secure(true)` in Spring.
+    metadata:
+      title: Cookie without the Secure flag
+      cwe: ["CWE-614: Sensitive Cookie in HTTPS Session Without 'Secure' Attribute"]
+      owasp: ["A05:2021 - Security Misconfiguration"]
+      confidence: high
+      severity: medium
+    pattern-either:
+      - pattern: (javax.servlet.http.Cookie $C).setSecure(false)
+      - pattern: (jakarta.servlet.http.Cookie $C).setSecure(false)
+      - pattern: $B.secure(false)
+      - patterns:
+          - pattern: $RESP.addCookie($C)
+          - pattern-either:
+              - pattern-inside: |
+                  $T $C = new $COOKIE(...);
+                  ...
+              - pattern-inside: |
+                  $C = new $COOKIE(...);
+                  ...
+          - metavariable-regex:
+              metavariable: $COOKIE
+              regex: ^((javax|jakarta)\.servlet\.http\.)?Cookie$
+          - pattern-not-inside: |
+              $C.setSecure(true);
+              ...
+          # Already reported at the setSecure(false) call.
+          - pattern-not-inside: |
+              $C.setSecure(false);
+              ...

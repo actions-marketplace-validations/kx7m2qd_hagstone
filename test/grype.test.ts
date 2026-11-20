@@ -112,3 +112,15 @@ describe("grype config", () => {
     expect(offline).toContain("validate-age: false");
   });
 });
+
+describe("anchoring image findings to the Dockerfile", () => {
+  it("uses the final FROM line (the stage that becomes the image) and keeps the in-image path", async () => {
+    const { anchorToDockerfile, finalFromLine } = await import("../src/scan.js");
+    const df = "# build\nFROM node:22 AS build\nRUN npm ci\n\nfrom gcr.io/distroless/nodejs22\nCOPY --from=build /app /app\n";
+    expect(finalFromLine(df)).toBe(5);
+    expect(finalFromLine("RUN x\n")).toBe(1);
+    const [f] = anchorToDockerfile(normalizeGrype({ matches: [match({})] }).findings, "deploy/Dockerfile", df);
+    expect(f!.location).toEqual({ path: "deploy/Dockerfile", startLine: 5 });
+    expect(f!.message).toMatch(/Found at \/lib\/apk\/db\/installed in the image\.$/);
+  });
+});

@@ -1,0 +1,77 @@
+rules:
+  - id: java-ldap-injection
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Request data is built into an LDAP search filter or base name. Characters like `*`, `(`, `)`
+      and `|` let an attacker widen the search (list every user) or bypass a login check. Use a
+      parameterized filter (`ctx.search(base, "(uid={0})", new Object[]{uid}, controls)`) or
+      Spring LDAP's `LdapQueryBuilder`, or escape the value with `LdapEncoder.filterEncode`.
+    metadata:
+      title: LDAP injection
+      cwe: ["CWE-90: Improper Neutralization of Special Elements used in an LDAP Query"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: high
+      severity: high
+    mode: taint
+    pattern-sources:
+      # Servlet request data (javax and jakarta).
+      - patterns:
+          - pattern-either:
+              - pattern: (javax.servlet.http.HttpServletRequest $REQ).$GET(...)
+              - pattern: (jakarta.servlet.http.HttpServletRequest $REQ).$GET(...)
+              - pattern: (javax.servlet.ServletRequest $REQ).$GET(...)
+              - pattern: (jakarta.servlet.ServletRequest $REQ).$GET(...)
+          - metavariable-regex:
+              metavariable: $GET
+              regex: ^(getParameter|getParameterValues|getParameterMap|getParameterNames|getHeader|getHeaders|getHeaderNames|getQueryString|getCookies|getInputStream|getReader|getPathInfo|getPart|getParts)$
+      # Spring MVC / JAX-RS handler parameters bound from the request (numbers, booleans and UUIDs can't carry an injection).
+      # The parameter itself (its declaration), so dataflow carries it and a guard can clean it.
+      - patterns:
+          - pattern-either:
+              - pattern: $RET $M(..., @$ANN $T $P, ...) { ... }
+              - pattern: $RET $M(..., @$ANN(...) $T $P, ...) { ... }
+          - metavariable-regex:
+              metavariable: $ANN
+              regex: ^(RequestParam|PathVariable|RequestHeader|CookieValue|RequestBody|ModelAttribute|MatrixVariable|RequestPart|QueryParam|PathParam|FormParam|HeaderParam|CookieParam|MatrixParam)$
+          - metavariable-regex:
+              metavariable: $T
+              regex: ^(?!(int|long|short|byte|double|float|boolean|char|Integer|Long|Short|Byte|Double|Float|Boolean|Character|BigInteger|BigDecimal|UUID|LocalDate|LocalDateTime|Instant)$)
+          - focus-metavariable: $P
+    pattern-propagators:
+      - pattern: (StringBuilder $SB).append($X)
+        from: $X
+        to: $SB
+      - pattern: (StringBuffer $SB).append($X)
+        from: $X
+        to: $SB
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: Integer.parseInt(...)
+          - pattern: Integer.valueOf(...)
+          - pattern: Long.parseLong(...)
+          - pattern: Long.valueOf(...)
+          - pattern: Double.parseDouble(...)
+          - pattern: Boolean.parseBoolean(...)
+          - pattern: java.util.UUID.fromString(...)
+      # Rejected unless it is in an allowlist or matches a pattern: clean from there on.
+      - by-side-effect: true
+        patterns:
+          - pattern-either:
+              - pattern-inside: if (!$C.contains($X)) { ... }
+              - pattern-inside: if (!$C.contains($X)) $S;
+              - pattern-inside: if (!$X.matches($RE)) { ... }
+              - pattern-inside: if (!$X.matches($RE)) $S;
+          - pattern: $X
+      - pattern: org.springframework.ldap.support.LdapEncoder.filterEncode(...)
+      - pattern: LdapEncoder.filterEncode(...)
+    pattern-sinks:
+      # The base name and the filter; values bound to `{0}` placeholders are escaped by JNDI.
+      - patterns:
+          - pattern-either:
+              - pattern: (javax.naming.directory.DirContext $C).search($BASE, $FILTER, ...)
+              - pattern: (javax.naming.directory.InitialDirContext $C).search($BASE, $FILTER, ...)
+              - pattern: (javax.naming.ldap.LdapContext $C).search($BASE, $FILTER, ...)
+              - pattern: (javax.naming.ldap.InitialLdapContext $C).search($BASE, $FILTER, ...)
+              - pattern: (org.springframework.ldap.core.LdapTemplate $C).search($BASE, $FILTER, ...)
+          - focus-metavariable: [$BASE, $FILTER]

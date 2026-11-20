@@ -32,6 +32,9 @@ scanning** (annotated on changed lines in the PR), and a findings table in the r
 | Input | Default | What it does |
 |---|---|---|
 | `path` | `.` | Directory to scan |
+| `image` | | Scan this container image instead of `path` (`docker:my-app:<sha>` after a build step, `ghcr.io/org/app:1.2`, `oci-archive:app.tar`) |
+| `dockerfile` | `<path>/Dockerfile` if present | With `image`: findings point at this Dockerfile's final `FROM` line |
+| `sarif-category` | `hagstone`, or `hagstone-image:<name>` with `image` | Code scanning category |
 | `fail-on` | `high` | Fail if any finding is at least this severe (`critical`…`info`, or `none`) |
 | `trust-reachability` | `false` | Let `fail-on` use the lowered severity of dependencies nothing uses, or only tests and dev tooling use |
 | `reachable-only` | `false` | Leave unreachable dependency findings out entirely |
@@ -61,12 +64,24 @@ Outputs: `exit-code` (0 clean, 1 findings at/above `fail-on`, 2 scan error) and 
   is used on pull requests, and a PR that changes it gets a warning.
 - IaC findings come from Trivy's built-in checks; inline `trivy:ignore` comments in the repo are not
   honoured (use `hagstone suppress`), and remote Terraform modules are never downloaded.
-- Container images aren't an Action input yet. Scan one in a job step after building it:
+- Container images: run the Action a second time with `image` after the build step:
 
   ```yaml
-  - run: npx -y hagstone@0 scan --image docker:my-app:${{ github.sha }} --format sarif --output image.sarif
-  - uses: github/codeql-action/upload-sarif@<sha> # pin it
-    with: { sarif_file: image.sarif, category: hagstone-image }
+  - run: docker build -t my-app:${{ github.sha }} .
+  - uses: kx7m2qd/hagstone@v0
+    with:
+      image: docker:my-app:${{ github.sha }}
   ```
 
-  Grype's vulnerability database (several GB) is downloaded on the first image scan in a job.
+  - Findings point at the Dockerfile's final `FROM` line (the base image is usually the fix), so they
+    show up as annotations, PR comments when that line changes, and code scanning alerts on a real
+    file. The path inside the image is in the message. Without a Dockerfile, they are listed in the
+    check run summary instead: annotations and review comments can only point at repository files.
+  - Results upload under `hagstone-image:<image name>` (tag and digest dropped), so they never replace
+    the repository scan's alerts, and each new tag updates the same analysis.
+  - `.hagstoneignore`, the baseline and the license policy describe the repository, so image mode
+    doesn't read them; `engines` and `include-tests` don't apply.
+  - Grype's vulnerability database (several GB) is downloaded on each run; it is kept out of the
+    engine cache on purpose.
+- Any finding whose path isn't a file in the checkout (not only image packages) is listed in the check
+  run summary rather than sent as an annotation or comment.

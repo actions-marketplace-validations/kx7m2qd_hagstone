@@ -67,13 +67,14 @@ platforms are strongest). The product goal is global either way.
 | Capability | Status | Engine (license to verify before wrapping) |
 |---|---|---|
 | SAST: JavaScript/TypeScript, Python | ✅ 40 rules, taint-aware | Opengrep + our rules |
-| SAST: Java, Go, C#, PHP, Kotlin, Ruby | ❌ | Opengrep + our rules |
+| SAST: Java | 🟡 11 rules (OWASP Benchmark for Java categories), same-file taint; no cross-file yet | Opengrep + our rules |
+| SAST: Go, C#, PHP, Kotlin, Ruby | ❌ | Opengrep + our rules |
 | SAST: C/C++ | ❌ (last: memory bugs need different analysis) | TBD |
 | Dependency vulnerabilities (SCA) + reachability | ✅ | OSV-Scanner |
 | Secrets | ✅ | Gitleaks |
 | Supply chain (malicious, typosquat, install scripts) | ✅ | pkgrisk (ours) |
 | Infrastructure as code (Terraform, Kubernetes, Dockerfile, Helm, CloudFormation) | ✅ exposures only; hardening hidden | Trivy (Apache-2.0; KICS/Checkov can't be pinned) |
-| Container images | ✅ CLI (`--image`); not yet an Action input | Syft → Grype (Apache-2.0) |
+| Container images | ✅ CLI (`--image`) and Action (`image`) | Syft → Grype (Apache-2.0) |
 | SBOM (CycloneDX / SPDX), license compliance | ✅ | Syft (Apache-2.0) |
 | DAST: running web apps | ❌ | ZAP + Nuclei |
 | API security (OpenAPI-driven) | ❌ | ZAP |
@@ -141,6 +142,7 @@ test/           unit tests (vitest)
 - [x] Unit tests for the Finding model, ignore rules, engine normalizers, SARIF
 - [x] Grow rules to ~40 using the rule loop (§5) — 40 rules (JS + Python); every OWASP Python category has a rule
 - [x] OWASP Benchmark for Python: `npm run bench:owasp`, pinned + checksum-verified, per-category gate
+- [x] OWASP Benchmark for Java: `npm run bench:owasp:java` (2026-11-20), same gate; both run in CI
   (no labelled OWASP suite exists for JS)
 - [x] 20 real CVE fixes (npm + PyPI advisories): `npm run bench:cves`, vulnerable vs fixed file, pinned + verified
 
@@ -192,11 +194,15 @@ hardening hidden, repo can't silence checks or trigger module downloads; bench c
 `bench/cases/iac/`). Licenses + SBOM via Syft ✓ built 2026-11-20 (`.hagstone/licenses.json` policy,
 base-branch copy in the Action; `hagstone sbom`; later VEX, AI-BOM and Cosign signing). Container
 images via Syft → Grype ✓ built 2026-11-20 (`hagstone scan --image`; one finding per source package;
-osv-scanner on a Syft SBOM was tried and missed openssl/zlib on Alpine). Open: an `image` Action input
-(check-run annotations need repo paths), a pinned-image recall bench (needs network + Grype's DB). Each: pinned + verified, normalized into
+osv-scanner on a Syft SBOM was tried and missed openssl/zlib on Alpine). Action `image` input ✓
+(findings anchored to the Dockerfile's FROM line; separate code scanning category). Engine signatures
+and provenance verified in CI (`engine-signatures.yml`) ✓. Open: a pinned-image recall bench (needs
+network + Grype's DB). Each: pinned + verified, normalized into
 `Finding`, benchmark cases.
 
-**Step 3 — SAST depth.**
+**Step 3 — SAST depth.** Java started 2026-11-20 (spec `docs/specs/java-sast.md`): 11 rules covering
+the OWASP Benchmark for Java's categories, average score 0.72 with a per-category gate; Spring app
+bench case. Measured gap: cross-file taint (controller → repository) — Opengrep has none, so it is next.
 - Languages, in order: **Java** (Spring, eGovFrame; gate on the OWASP Benchmark for Java), **Go**,
   then C#, PHP, Kotlin, Ruby; **C/C++** last (memory bugs need a different kind of analysis).
   Each language gets real-CVE-fix benchmark cases like `bench:cves`.

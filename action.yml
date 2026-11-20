@@ -1,5 +1,5 @@
 name: Hagstone security scan
-description: Local-first security scan for code, dependencies and secrets. PR comments, code scanning, and no code leaves the runner.
+description: Local-first security scan for code, dependencies, secrets, IaC, licenses and container images. PR comments, code scanning, and no code leaves the runner.
 author: kx7m2qd
 branding:
   icon: shield
@@ -9,6 +9,21 @@ inputs:
   path:
     description: Directory to scan, relative to the workspace.
     default: "."
+  image:
+    description: >-
+      Scan this container image instead of `path` (e.g. `docker:my-app:<commit sha>` after a
+      build step, or `ghcr.io/org/app:1.2`). Results go to their own code scanning category, so they
+      don't replace the repository scan's alerts.
+    default: ""
+  dockerfile:
+    description: >-
+      With `image`: the Dockerfile that builds it, relative to the workspace. Findings point at its final
+      FROM line. Default: `<path>/Dockerfile` if it exists; otherwise findings are listed in the check
+      run summary (they have no file in the repository to annotate).
+    default: ""
+  sarif-category:
+    description: Code scanning category. Default `hagstone`, or `hagstone-image:<image name>` with `image`.
+    default: ""
   fail-on:
     description: Fail the check if a finding is at least this severe (critical, high, medium, low, info, none).
     default: high
@@ -91,6 +106,9 @@ runs:
       env:
         ACTION_PATH: ${{ github.action_path }}
         IN_PATH: ${{ inputs.path }}
+        IN_IMAGE: ${{ inputs.image }}
+        IN_DOCKERFILE: ${{ inputs.dockerfile }}
+        IN_CATEGORY: ${{ inputs.sarif-category }}
         IN_FAIL_ON: ${{ inputs.fail-on }}
         IN_TRUST: ${{ inputs.trust-reachability }}
         IN_REACHABLE_ONLY: ${{ inputs.reachable-only }}
@@ -101,13 +119,35 @@ runs:
         BASE_SHA: ${{ github.event.pull_request.base.sha }}
       run: |
         args=(scan "$IN_PATH" --format sarif --output "$IN_SARIF" --fail-on "$IN_FAIL_ON")
+        category="${IN_CATEGORY:-hagstone}"
+        prefix=$(git -C "$IN_PATH" rev-parse --show-prefix 2>/dev/null || true)
+
+        if [ -n "$IN_IMAGE" ]; then
+          # Image mode: the repo's ignore / baseline / license files don't describe an image.
+          args=(scan --image "$IN_IMAGE" --format sarif --output "$IN_SARIF" --fail-on "$IN_FAIL_ON")
+          dockerfile="$IN_DOCKERFILE"
+          [ -z "$dockerfile" ] && [ -f "$IN_PATH/Dockerfile" ] && dockerfile="$IN_PATH/Dockerfile"
+          if [ -n "$dockerfile" ]; then
+            [ -f "$dockerfile" ] || { echo "::error::Hagstone: dockerfile '$dockerfile' not found."; echo "exit-code=2" >> "$GITHUB_OUTPUT"; exit 0; }
+            args+=(--dockerfile "$dockerfile")
+          fi
+          # Dockerfile paths are relative to the workspace, not to `path`.
+          prefix=""
+          if [ -z "$IN_CATEGORY" ]; then
+            # One category per image name (scheme and tag/digest dropped), so each tag updates the same analysis.
+            ref="$IN_IMAGE"
+            case "$ref" in registry:*|docker:*|podman:*|containerd:*|docker-archive:*|oci-archive:*|oci-dir:*|singularity:*) ref="${ref#*:}" ;; esac
+            ref="${ref%@*}"
+            case "${ref##*/}" in *:*) ref="${ref%:*}" ;; esac
+            category="hagstone-image:$ref"
+          fi
+        fi
 
         # On pull requests, ignore patterns come from the base branch: the PR's own .hagstoneignore
         # could otherwise exclude the code it adds. If the base copy can't be read, use none.
-        if [ -n "$BASE_SHA" ]; then
+        if [ -n "$BASE_SHA" ] && [ -z "$IN_IMAGE" ]; then
           ignore_file="$RUNNER_TEMP/hagstone-base.hagstoneignore"
           : > "$ignore_file"
-          prefix=$(git -C "$IN_PATH" rev-parse --show-prefix 2>/dev/null || true)
           if git -C "$IN_PATH" cat-file -e "$BASE_SHA^{commit}" 2>/dev/null \
              || git -C "$IN_PATH" fetch --quiet --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null; then
             git -C "$IN_PATH" show "$BASE_SHA:${prefix}.hagstoneignore" > "$ignore_file" 2>/dev/null \
@@ -150,16 +190,17 @@ runs:
 
         [ "$IN_TRUST" = "true" ] && args+=(--trust-reachability)
         [ "$IN_REACHABLE_ONLY" = "true" ] && args+=(--reachable-only)
-        [ "$IN_INCLUDE_TESTS" = "true" ] && args+=(--include-tests)
+        [ "$IN_INCLUDE_TESTS" = "true" ] && [ -z "$IN_IMAGE" ] && args+=(--include-tests)
         [ "$IN_OFFLINE" = "true" ] && args+=(--offline)
-        [ -n "$IN_ENGINES" ] && args+=(--engines "$IN_ENGINES")
+        [ -n "$IN_ENGINES" ] && [ -z "$IN_IMAGE" ] && args+=(--engines "$IN_ENGINES")
         set +e
         node "$ACTION_PATH/dist/cli.js" "${args[@]}"
         code=$?
         set -e
         echo "exit-code=$code" >> "$GITHUB_OUTPUT"
         echo "sarif-file=$IN_SARIF" >> "$GITHUB_OUTPUT"
-        echo "prefix=$(git -C "$IN_PATH" rev-parse --show-prefix 2>/dev/null || true)" >> "$GITHUB_OUTPUT"
+        echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
+        echo "category=$category" >> "$GITHUB_OUTPUT"
         [ -f "$IN_SARIF" ] && node "$ACTION_PATH/scripts/action-summary.mjs" "$IN_SARIF" "$code" >> "$GITHUB_STEP_SUMMARY" || true
 
     - name: Upload to code scanning
@@ -167,7 +208,7 @@ runs:
       uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
       with:
         sarif_file: ${{ inputs.sarif-file }}
-        category: hagstone
+        category: ${{ steps.scan.outputs.category }}
 
     # Check run + inline PR comments. Sends Finding data only; never fails the job (the Gate does).
     - name: Report to pull request

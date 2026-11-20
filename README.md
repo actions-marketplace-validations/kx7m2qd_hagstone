@@ -6,8 +6,10 @@ supply-chain, infrastructure-as-code and license checks, and reports everything 
 Your source code never leaves your machine or CI runner. The supply-chain and license checks send package
 names and versions to npm and PyPI and nothing else, and `--offline` turns those lookups off too.
 
-- **Code:** taint-aware [Opengrep](https://github.com/opengrep/opengrep) rules for JavaScript/TypeScript
-  and Python. Every rule ships with tests and maps to a CWE and an OWASP category.
+- **Code:** taint-aware [Opengrep](https://github.com/opengrep/opengrep) rules for JavaScript/TypeScript,
+  Python and Java (servlets, Spring MVC, JAX-RS; JDBC, JdbcTemplate, JPA, Hibernate). Every rule ships
+  with tests and maps to a CWE and an OWASP category. Java follows untrusted data through helper
+  methods in the same file, but not yet across files (a controller passing input to a repository).
 - **Dependencies:** known vulnerabilities via [OSV-Scanner](https://github.com/google/osv-scanner),
   with a reachability check that lowers the severity of vulnerable packages nothing imports.
 - **Secrets:** [Gitleaks](https://github.com/gitleaks/gitleaks). Secret values are redacted from every
@@ -28,7 +30,9 @@ names and versions to npm and PyPI and nothing else, and `--offline` turns those
   (`openssl (libcrypto3, libssl3)`), not one per CVE per binary. The first image scan downloads
   Grype's vulnerability database (several GB on disk, cached); `--offline` uses the cached copy.
 
-Engine binaries are pinned by version and SHA-256, and Hagstone checks them on every run.
+Engine binaries are pinned by version and SHA-256, and Hagstone checks them on every run. CI checks
+each pin against the upstream release's Sigstore signature or SLSA provenance (Gitleaks publishes
+neither).
 
 ## Install
 

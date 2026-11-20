@@ -27,3 +27,37 @@ jobs:
           # Gate dev-only and unreachable dependencies at their lowered severity: a vulnerable
           # package only our build/test tooling pulls in (vite, vitest) shouldn't block main.
           trust-reachability: true
+
+  # Image mode on a real runner: a known-vulnerable public image, findings anchored to a Dockerfile.
+  # No SARIF upload (it would put this test image's alerts in the Security tab) and no gate.
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./
+        id: hagstone
+        with:
+          image: registry:alpine:3.18.0
+          dockerfile: bench/cases/iac/docker/Dockerfile
+          fail-on: none
+          upload-sarif: "false"
+          pr-comments: "false"
+          sarif-file: image.sarif
+      - name: Findings point at the Dockerfile, openssl is found
+        env:
+          CODE: ${{ steps.hagstone.outputs.exit-code }}
+        run: |
+          [ "$CODE" = "0" ] || { echo "::error::exit code $CODE"; exit 1; }
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync("image.sarif", "utf8")).runs[0].results;
+            const uris = new Set(r.map((x) => x.locations[0].physicalLocation.artifactLocation.uri));
+            if (!r.length) throw new Error("no image findings");
+            if (uris.size !== 1 || !uris.has("bench/cases/iac/docker/Dockerfile")) throw new Error("unexpected paths: " + [...uris]);
+            if (!r.some((x) => /^openssl \(libcrypto3, libssl3\)/.test(x.message.text))) throw new Error("openssl not found");
+            console.log(r.length + " image findings, all on the Dockerfile");
+          '

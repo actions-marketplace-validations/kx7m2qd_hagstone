@@ -1,17 +1,17 @@
 {
   "pass": true,
   "precision": 1,
-  "recall": 0.985,
+  "recall": 0.975,
   "thresholds": {
     "precision": 0.95,
     "recall": 0.85
   },
   "totals": {
-    "labels": 68,
-    "findings": 67,
-    "tp": 67,
+    "labels": 79,
+    "findings": 77,
+    "tp": 77,
     "fp": 0,
-    "fn": 1
+    "fn": 2
   },
   "rules": {
     "aws-0057": {
@@ -50,6 +50,76 @@
       "recall": 1
     },
     "DS-0002": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "java-command-injection": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "java-insecure-cookie": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "java-ldap-injection": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "java-path-traversal": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "java-sql-injection": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    "java-trust-boundary": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "java-weak-cipher": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "java-weak-hash": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "java-weak-random": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "java-xss": {
       "tp": 1,
       "fp": 0,
       "fn": 0,
@@ -377,7 +447,8 @@
     "express-api/src/reports.js:7 js-sql-injection ← js-sql-formatted-query"
   ],
   "missed": [
-    "iac/terraform/main.tf:118 aws-0057"
+    "iac/terraform/main.tf:118 aws-0057",
+    "spring-app/src/main/java/com/example/shop/ProductRepository.java:19 java-sql-injection"
   ],
   "reachability": {
     "correct": 15,

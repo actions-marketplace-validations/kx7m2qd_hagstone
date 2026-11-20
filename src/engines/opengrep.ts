@@ -1,3 +1,5 @@
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   collapseOverlaps,
@@ -13,6 +15,25 @@ import { run } from "./run.js";
 import type { EngineOutput } from "./types.js";
 
 export const RULES_DIR = fileURLToPath(new URL("../../rules", import.meta.url));
+
+/**
+ * Rule directories (one per language) scanned with `--taint-intrafile`. It follows taint through
+ * helper methods in the same file: on the OWASP Benchmark it roughly doubles the Java score, but it
+ * lowers Python's (more false positives), so it is chosen per language.
+ */
+export const INTRAFILE_RULE_DIRS = new Set(["java"]);
+
+/** Split `rules/<lang>/` into the default pass and the intrafile pass. Pure apart from the listing. */
+export function rulePasses(rulesDir: string = RULES_DIR): { plain: string[]; intrafile: string[] } {
+  const dirs = readdirSync(rulesDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name)
+    .sort();
+  return {
+    plain: dirs.filter((d) => !INTRAFILE_RULE_DIRS.has(d)).map((d) => join(rulesDir, d)),
+    intrafile: dirs.filter((d) => INTRAFILE_RULE_DIRS.has(d)).map((d) => join(rulesDir, d)),
+  };
+}
 
 interface OgPos {
   line: number;
@@ -154,12 +175,19 @@ export function describeError(root: string, e: OgError): string {
   return `opengrep: ${e.message ?? type}`.slice(0, 300);
 }
 
-export async function runOpengrep(bin: string, root: string, ignores: string[]): Promise<EngineOutput> {
+export interface OpengrepOptions {
+  /** Rules file or directory, run in one pass. Default: all of `rules/`, split by `rulePasses`. */
+  config?: string;
+  /** Follow taint through functions in the same file (`--taint-intrafile`). */
+  taintIntrafile?: boolean;
+}
+
+async function runOnce(bin: string, root: string, ignores: string[], configs: string[], intrafile: boolean): Promise<OgOutput> {
   // `--exclude=<p>` (not two argv items) so a pattern can never be read as a flag.
   const excludes = ignores.map((p) => `--exclude=${p.replace(/\/$/, "")}`);
   const args = [
     "scan",
-    `--config=${RULES_DIR}`,
+    ...configs.map((c) => `--config=${c}`),
     "--json",
     "--quiet",
     // The scanned repo is untrusted: it must not be able to silence findings with
@@ -167,6 +195,7 @@ export async function runOpengrep(bin: string, root: string, ignores: string[]):
     // through .hagstoneignore only, which every report lists.
     "--disable-nosem",
     "--x-ignore-semgrepignore-files",
+    ...(intrafile ? ["--taint-intrafile"] : []),
     ...excludes,
     "--",
     ".",
@@ -175,7 +204,19 @@ export async function runOpengrep(bin: string, root: string, ignores: string[]):
   if (res.code !== 0 && !res.stdout.trim().startsWith("{")) {
     throw new Error(`opengrep exited ${res.code}: ${res.stderr.trim().slice(0, 500)}`);
   }
-  const out = JSON.parse(res.stdout) as OgOutput;
-  const warnings = out.errors.map((e) => describeError(root, e));
-  return { findings: collapseOverlaps(normalizeOpengrep(root, out)), warnings };
+  return JSON.parse(res.stdout) as OgOutput;
+}
+
+export async function runOpengrep(bin: string, root: string, ignores: string[], opts: OpengrepOptions = {}): Promise<EngineOutput> {
+  const passes: [string[], boolean][] = [];
+  if (opts.config) passes.push([[opts.config], !!opts.taintIntrafile]);
+  else {
+    const { plain, intrafile } = rulePasses();
+    if (plain.length) passes.push([plain, false]);
+    if (intrafile.length) passes.push([intrafile, true]);
+  }
+  const outs = await Promise.all(passes.map(([configs, intra]) => runOnce(bin, root, ignores, configs, intra)));
+  const findings = outs.flatMap((out) => normalizeOpengrep(root, out));
+  const warnings = [...new Set(outs.flatMap((out) => out.errors.map((e) => describeError(root, e))))];
+  return { findings: collapseOverlaps(findings), warnings };
 }

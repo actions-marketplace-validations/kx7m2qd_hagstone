@@ -1,9 +1,11 @@
 /**
- * OWASP Benchmark for Python: score our rules per vulnerability category the way OWASP does
+ * OWASP Benchmark (Python or Java): score our rules per vulnerability category the way OWASP does
  * (score = true-positive rate − false-positive rate, per test file) and write
- * bench/results/owasp-python.json. Exits 1 if a category drops below bench/owasp-thresholds.json.
+ * bench/results/owasp-<lang>.json. Exits 1 if a category drops below its threshold file.
  *
- * The suite is GPL-3.0, so it is not vendored: it is downloaded at a pinned commit, verified
+ *   tsx bench/owasp.ts [python|java] [--intrafile | --no-intrafile]   (compare the two modes)
+ *
+ * The suites are GPL, so they are not vendored: each is downloaded at a pinned commit, verified
  * by SHA-256 like our engine binaries, and cached under the Hagstone cache directory.
  */
 import { access, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
@@ -17,14 +19,43 @@ import { run } from "../src/engines/run.js";
 import { downloadVerified } from "./fetch.js";
 
 const BENCH_DIR = fileURLToPath(new URL(".", import.meta.url));
-const RULES_DIR = fileURLToPath(new URL("../rules/python", import.meta.url));
 
-const SUITE = {
-  commit: "f1291485808b66e20ddb6b01b10dc71b3df8c8ba",
-  sha256: "0defda4cce2ea7675fbeae5b059b4d7cca7d49232529367133feb1adfb529096",
-  expected: "expectedresults-0.1.csv",
-};
-const URL_ = `https://codeload.github.com/OWASP-Benchmark/BenchmarkPython/tar.gz/${SUITE.commit}`;
+interface Suite {
+  repo: string;
+  commit: string;
+  sha256: string;
+  expected: string;
+  /** Directory scanned, inside the suite (helpers included, so cross-file flows exist). */
+  scan: string;
+  ext: string;
+  /** Run with `--taint-intrafile` by default (it is what the product does for this language). */
+  intrafile: boolean;
+}
+
+export const SUITES = {
+  python: {
+    repo: "OWASP-Benchmark/BenchmarkPython",
+    commit: "f1291485808b66e20ddb6b01b10dc71b3df8c8ba",
+    sha256: "0defda4cce2ea7675fbeae5b059b4d7cca7d49232529367133feb1adfb529096",
+    expected: "expectedresults-0.1.csv",
+    scan: "testcode",
+    ext: ".py",
+    intrafile: false,
+  },
+  java: {
+    repo: "OWASP-Benchmark/BenchmarkJava",
+    commit: "10dfcc54ad02dcfcb358b0ba4a0fef8c919a6d17",
+    sha256: "9bd7f125557e35c49af0040bed13eb19a9056c8f7a84719445826224227d022f",
+    expected: "expectedresults-1.2.csv",
+    scan: "src/main/java",
+    ext: ".java",
+    intrafile: true,
+  },
+} satisfies Record<string, Suite>;
+export type SuiteLang = keyof typeof SUITES;
+
+const suiteUrl = (s: Suite) => `https://codeload.github.com/${s.repo}/tar.gz/${s.commit}`;
+const rulesDir = (lang: SuiteLang) => fileURLToPath(new URL(`../rules/${lang}`, import.meta.url));
 
 interface Case {
   test: string;
@@ -53,12 +84,12 @@ async function exists(path: string): Promise<boolean> {
 }
 
 /** Download, verify and extract the pinned suite once; later runs reuse the cache. */
-async function fetchSuite(): Promise<string> {
+async function fetchSuite(LANG: SuiteLang, SUITE: Suite): Promise<string> {
   const parent = join(cacheRoot(), "bench");
-  const dir = join(parent, `owasp-python-${SUITE.commit.slice(0, 12)}`);
+  const dir = join(parent, `owasp-${LANG}-${SUITE.commit.slice(0, 12)}`);
   if (await exists(join(dir, SUITE.expected))) return dir;
 
-  const bytes = await downloadVerified(URL_, SUITE.sha256, "OWASP Benchmark");
+  const bytes = await downloadVerified(suiteUrl(SUITE), SUITE.sha256, `OWASP Benchmark (${LANG})`);
   await mkdir(parent, { recursive: true, mode: 0o700 });
   const work = await mkdtemp(join(parent, ".staging-"));
   try {
@@ -75,7 +106,7 @@ async function fetchSuite(): Promise<string> {
   return dir;
 }
 
-async function loadCases(dir: string): Promise<Case[]> {
+async function loadCases(dir: string, SUITE: Suite): Promise<Case[]> {
   const text = await readFile(join(dir, SUITE.expected), "utf8");
   return text
     .split("\n")
@@ -86,23 +117,24 @@ async function loadCases(dir: string): Promise<Case[]> {
     });
 }
 
-/** CWEs our Python rules claim, read from their metadata. */
-async function coveredCwes(): Promise<Set<string>> {
+/** CWEs our rules for this language claim, read from their metadata. */
+async function coveredCwes(dir: string): Promise<Set<string>> {
   const cwes = new Set<string>();
-  for (const name of await readdir(RULES_DIR)) {
+  for (const name of await readdir(dir).catch(() => [] as string[])) {
     if (!name.endsWith(".yml")) continue;
-    for (const m of (await readFile(join(RULES_DIR, name), "utf8")).matchAll(/CWE-\d+/g)) cwes.add(m[0]);
+    for (const m of (await readFile(join(dir, name), "utf8")).matchAll(/CWE-\d+/g)) cwes.add(m[0]);
   }
   return cwes;
 }
 
 const ratio = (num: number, den: number) => (den === 0 ? 0 : Math.round((num / den) * 1000) / 1000);
 
-export function scoreCategories(cases: Case[], findings: Finding[], covered: Set<string>): Record<string, CategoryScore> {
+export function scoreCategories(cases: Case[], findings: Finding[], covered: Set<string>, ext = ".py"): Record<string, CategoryScore> {
   // A test file counts as flagged for its category if any finding in it carries that CWE.
   const flagged = new Set<string>();
   for (const f of findings) {
-    const test = f.location.path.match(/(BenchmarkTest\d+)\.py$/)?.[1];
+    const base = f.location.path.split("/").pop() ?? "";
+    const test = base.endsWith(ext) ? base.slice(0, -ext.length).match(/^(BenchmarkTest\d+)$/)?.[1] : undefined;
     if (test) for (const cwe of f.cwe ?? []) flagged.add(`${test} ${cwe}`);
   }
   const out: Record<string, CategoryScore> = {};
@@ -121,19 +153,29 @@ export function scoreCategories(cases: Case[], findings: Finding[], covered: Set
 }
 
 async function main(): Promise<number> {
-  const thresholds = JSON.parse(await readFile(join(BENCH_DIR, "owasp-thresholds.json"), "utf8")) as Record<string, number>;
-  const dir = await fetchSuite();
-  const cases = await loadCases(dir);
+  const LANG = (process.argv.slice(2).find((a) => !a.startsWith("--")) ?? "python") as SuiteLang;
+  const SUITE: Suite = SUITES[LANG];
+  if (!SUITE) throw new Error(`unknown suite "${LANG}" (python | java)`);
+  const INTRAFILE = process.argv.includes("--no-intrafile") ? false : SUITE.intrafile || process.argv.includes("--intrafile");
+  const RULES_DIR = rulesDir(LANG);
+  const THRESHOLDS = LANG === "python" ? "owasp-thresholds.json" : `owasp-thresholds-${LANG}.json`;
+  const URL_ = suiteUrl(SUITE);
+  const thresholds = JSON.parse(await readFile(join(BENCH_DIR, THRESHOLDS), "utf8")) as Record<string, number>;
+  const dir = await fetchSuite(LANG, SUITE);
+  const cases = await loadCases(dir, SUITE);
   const bin = await resolveEngine("opengrep", { autoInstall: true });
-  const { findings, warnings } = await runOpengrep(bin, join(dir, "testcode"), DEFAULT_IGNORES);
-  const categories = scoreCategories(cases, findings, await coveredCwes());
+  const { findings, warnings } = await runOpengrep(bin, join(dir, SUITE.scan), DEFAULT_IGNORES, {
+    config: RULES_DIR,
+    taintIntrafile: INTRAFILE,
+  });
+  const categories = scoreCategories(cases, findings, await coveredCwes(RULES_DIR), SUITE.ext);
 
   const failures = Object.entries(thresholds)
     .filter(([cat, min]) => (categories[cat]?.score ?? 0) < min)
     .map(([cat, min]) => `${cat}: score ${categories[cat]?.score ?? 0} < gate ${min}`);
-  const result = { pass: failures.length === 0, suite: { ...SUITE, url: URL_ }, thresholds, categories, failures, warnings };
+  const result = { pass: failures.length === 0, suite: { ...SUITE, url: URL_, intrafile: INTRAFILE }, thresholds, categories, failures, warnings };
   await mkdir(join(BENCH_DIR, "results"), { recursive: true });
-  await writeFile(join(BENCH_DIR, "results", "owasp-python.json"), JSON.stringify(result, null, 2) + "\n");
+  await writeFile(join(BENCH_DIR, "results", `owasp-${LANG}.json`), JSON.stringify(result, null, 2) + "\n");
 
   process.stdout.write(`${"category".padEnd(16)}${"cwe".padEnd(9)}  tp  fn  fp   tn    tpr    fpr  score\n`);
   for (const [cat, s] of Object.entries(categories)) {

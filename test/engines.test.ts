@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normalizeGitleaks, type GitleaksLeak } from "../src/engines/gitleaks.js";
-import { normalizeOpengrep, ruleIdOf, type OgOutput } from "../src/engines/opengrep.js";
+import { INTRAFILE_RULE_DIRS, normalizeOpengrep, ruleIdOf, rulePasses, type OgOutput } from "../src/engines/opengrep.js";
 import { normalizeOsv, severityFromScore, type OsvOutput } from "../src/engines/osv.js";
 
 const ROOT = "/repo";
@@ -63,6 +63,16 @@ describe("opengrep normalizer", () => {
   it("reports a sink once when several taint sources reach the same range", () => {
     const fs = normalizeOpengrep(ROOT, { results: [result(5, "db.query(sql)"), result(5, "db.query(sql)")], errors: [] });
     expect(fs).toHaveLength(1);
+  });
+});
+
+describe("opengrep rule passes", () => {
+  it("runs Java in the intrafile pass and every other language in the default one", () => {
+    const { plain, intrafile } = rulePasses();
+    const names = (dirs: string[]) => dirs.map((d) => d.split(/[\\/]/).pop());
+    expect(names(intrafile)).toEqual(["java"]);
+    expect(names(plain)).toEqual(expect.arrayContaining(["javascript", "python"]));
+    expect(names(plain).some((d) => INTRAFILE_RULE_DIRS.has(d!))).toBe(false);
   });
 });
 

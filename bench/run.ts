@@ -19,7 +19,7 @@ import { applyReachability } from "../src/reachability/index.js";
 const BENCH_DIR = fileURLToPath(new URL(".", import.meta.url));
 const CASES_DIR = join(BENCH_DIR, "cases");
 const RULES_DIR = join(BENCH_DIR, "..", "rules");
-const SOURCE_EXT = /\.(js|jsx|mjs|cjs|ts|tsx|py|tf|ya?ml)$|^(Docker|Container)file(\..+)?$/;
+const SOURCE_EXT = /\.(js|jsx|mjs|cjs|ts|tsx|py|java|tf|ya?ml)$|^(Docker|Container)file(\..+)?$/;
 const LABEL = /(?:\/\/|#)\s*expect:\s*([a-z0-9-]+)/;
 
 interface Label {

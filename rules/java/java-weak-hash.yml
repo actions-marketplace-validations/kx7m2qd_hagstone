@@ -1,0 +1,32 @@
+rules:
+  - id: java-weak-hash
+    languages: [java]
+    severity: WARNING
+    message: >-
+      MD2, MD4, MD5 and SHA-1 are broken: collisions can be computed, so they can't protect
+      integrity or signatures, and they are far too fast for passwords. Use SHA-256 or SHA-3 for
+      integrity, and bcrypt, scrypt, Argon2 or PBKDF2 (Spring Security `PasswordEncoder`) for
+      passwords.
+    metadata:
+      title: Weak hash algorithm
+      cwe: ["CWE-328: Use of Weak Hash"]
+      owasp: ["A02:2021 - Cryptographic Failures"]
+      confidence: high
+      severity: medium
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: java.security.MessageDigest.getInstance("$ALG", ...)
+              - pattern: MessageDigest.getInstance("$ALG", ...)
+          - metavariable-regex:
+              metavariable: $ALG
+              regex: (?i)^(md2|md4|md5|sha|sha-?1)$
+      - patterns:
+          - pattern-either:
+              - pattern: org.apache.commons.codec.digest.DigestUtils.$F(...)
+              - pattern: DigestUtils.$F(...)
+              - pattern: com.google.common.hash.Hashing.$F()
+              - pattern: Hashing.$F()
+          - metavariable-regex:
+              metavariable: $F
+              regex: ^(md2|md2Hex|md5|md5Hex|sha|sha1|sha1Hex|shaHex|getMd2Digest|getMd5Digest|getSha1Digest|getShaDigest|sha1|md5)$

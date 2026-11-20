@@ -1,0 +1,103 @@
+rules:
+  - id: java-path-traversal
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Request data is used in a file path (`File`, `Paths.get`, `Path.resolve`, file streams).
+      With `../` or an absolute path an attacker can read or overwrite files outside the intended
+      directory. Keep only the file name (`Paths.get(name).getFileName()` or
+      `FilenameUtils.getName`), or resolve the path and check
+      `resolved.normalize().startsWith(baseDir)` before using it.
+    metadata:
+      title: Path traversal
+      cwe: ["CWE-22: Improper Limitation of a Pathname to a Restricted Directory"]
+      owasp: ["A01:2021 - Broken Access Control"]
+      confidence: high
+      severity: high
+    mode: taint
+    pattern-sources:
+      # Servlet request data (javax and jakarta).
+      - patterns:
+          - pattern-either:
+              - pattern: (javax.servlet.http.HttpServletRequest $REQ).$GET(...)
+              - pattern: (jakarta.servlet.http.HttpServletRequest $REQ).$GET(...)
+              - pattern: (javax.servlet.ServletRequest $REQ).$GET(...)
+              - pattern: (jakarta.servlet.ServletRequest $REQ).$GET(...)
+          - metavariable-regex:
+              metavariable: $GET
+              regex: ^(getParameter|getParameterValues|getParameterMap|getParameterNames|getHeader|getHeaders|getHeaderNames|getQueryString|getCookies|getInputStream|getReader|getPathInfo|getPart|getParts)$
+      # Spring MVC / JAX-RS handler parameters bound from the request (numbers, booleans and UUIDs can't carry an injection).
+      # The parameter itself (its declaration), so dataflow carries it and a guard can clean it.
+      - patterns:
+          - pattern-either:
+              - pattern: $RET $M(..., @$ANN $T $P, ...) { ... }
+              - pattern: $RET $M(..., @$ANN(...) $T $P, ...) { ... }
+          - metavariable-regex:
+              metavariable: $ANN
+              regex: ^(RequestParam|PathVariable|RequestHeader|CookieValue|RequestBody|ModelAttribute|MatrixVariable|RequestPart|QueryParam|PathParam|FormParam|HeaderParam|CookieParam|MatrixParam)$
+          - metavariable-regex:
+              metavariable: $T
+              regex: ^(?!(int|long|short|byte|double|float|boolean|char|Integer|Long|Short|Byte|Double|Float|Boolean|Character|BigInteger|BigDecimal|UUID|LocalDate|LocalDateTime|Instant)$)
+          - focus-metavariable: $P
+      - pattern: (org.springframework.web.multipart.MultipartFile $F).getOriginalFilename()
+      - pattern: (javax.servlet.http.Part $F).getSubmittedFileName()
+      - pattern: (jakarta.servlet.http.Part $F).getSubmittedFileName()
+    pattern-propagators:
+      - pattern: (StringBuilder $SB).append($X)
+        from: $X
+        to: $SB
+      - pattern: (StringBuffer $SB).append($X)
+        from: $X
+        to: $SB
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: Integer.parseInt(...)
+          - pattern: Integer.valueOf(...)
+          - pattern: Long.parseLong(...)
+          - pattern: Long.valueOf(...)
+          - pattern: Double.parseDouble(...)
+          - pattern: Boolean.parseBoolean(...)
+          - pattern: java.util.UUID.fromString(...)
+      # Rejected unless it is in an allowlist or matches a pattern: clean from there on.
+      - by-side-effect: true
+        patterns:
+          - pattern-either:
+              - pattern-inside: if (!$C.contains($X)) { ... }
+              - pattern-inside: if (!$C.contains($X)) $S;
+              - pattern-inside: if (!$X.matches($RE)) { ... }
+              - pattern-inside: if (!$X.matches($RE)) $S;
+          - pattern: $X
+      - pattern: org.apache.commons.io.FilenameUtils.getName(...)
+      - pattern: (java.nio.file.Path $P).getFileName()
+      - pattern: (java.io.File $F).getName()
+      - pattern: $PATHS.get(...).getFileName()
+      - pattern: Path.of(...).getFileName()
+      - pattern: new File(...).getName()
+      - pattern: new java.io.File(...).getName()
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: new File(...)
+              - pattern: new java.io.File(...)
+              - pattern: new FileInputStream(...)
+              - pattern: new java.io.FileInputStream(...)
+              - pattern: new FileOutputStream(...)
+              - pattern: new java.io.FileOutputStream(...)
+              - pattern: new FileReader(...)
+              - pattern: new java.io.FileReader(...)
+              - pattern: new FileWriter(...)
+              - pattern: new java.io.FileWriter(...)
+              - pattern: new RandomAccessFile(...)
+              - pattern: new java.io.RandomAccessFile(...)
+              - pattern: java.nio.file.Paths.get(...)
+              - pattern: Paths.get(...)
+              - pattern: java.nio.file.Path.of(...)
+              - pattern: Path.of(...)
+              - pattern: (java.nio.file.Path $P).resolve(...)
+              - pattern: (java.nio.file.Path $P).resolveSibling(...)
+          # `Paths.get(name).getFileName()` / `new File(name).getName()` keep only the file name.
+          - pattern-not-inside: java.nio.file.Paths.get(...).getFileName()
+          - pattern-not-inside: Paths.get(...).getFileName()
+          - pattern-not-inside: Path.of(...).getFileName()
+          - pattern-not-inside: new File(...).getName()
+          - pattern-not-inside: new java.io.File(...).getName()

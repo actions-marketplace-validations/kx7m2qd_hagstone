@@ -1,0 +1,74 @@
+rules:
+  - id: java-command-injection
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Request data reaches `Runtime.exec` or `ProcessBuilder` (the command, its arguments or its
+      environment). An attacker can run their own commands on the server, or change what yours
+      does. Avoid shelling out; if you must, pass a fixed program and an argument array, check
+      each argument against an allowlist, and never build a `sh -c` / `cmd /c` string from input.
+    metadata:
+      title: OS command injection
+      cwe: ["CWE-78: Improper Neutralization of Special Elements used in an OS Command"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: high
+      severity: critical
+    mode: taint
+    pattern-sources:
+      # Servlet request data (javax and jakarta).
+      - patterns:
+          - pattern-either:
+              - pattern: (javax.servlet.http.HttpServletRequest $REQ).$GET(...)
+              - pattern: (jakarta.servlet.http.HttpServletRequest $REQ).$GET(...)
+              - pattern: (javax.servlet.ServletRequest $REQ).$GET(...)
+              - pattern: (jakarta.servlet.ServletRequest $REQ).$GET(...)
+          - metavariable-regex:
+              metavariable: $GET
+              regex: ^(getParameter|getParameterValues|getParameterMap|getParameterNames|getHeader|getHeaders|getHeaderNames|getQueryString|getCookies|getInputStream|getReader|getPathInfo|getPart|getParts)$
+      # Spring MVC / JAX-RS handler parameters bound from the request (numbers, booleans and UUIDs can't carry an injection).
+      # The parameter itself (its declaration), so dataflow carries it and a guard can clean it.
+      - patterns:
+          - pattern-either:
+              - pattern: $RET $M(..., @$ANN $T $P, ...) { ... }
+              - pattern: $RET $M(..., @$ANN(...) $T $P, ...) { ... }
+          - metavariable-regex:
+              metavariable: $ANN
+              regex: ^(RequestParam|PathVariable|RequestHeader|CookieValue|RequestBody|ModelAttribute|MatrixVariable|RequestPart|QueryParam|PathParam|FormParam|HeaderParam|CookieParam|MatrixParam)$
+          - metavariable-regex:
+              metavariable: $T
+              regex: ^(?!(int|long|short|byte|double|float|boolean|char|Integer|Long|Short|Byte|Double|Float|Boolean|Character|BigInteger|BigDecimal|UUID|LocalDate|LocalDateTime|Instant)$)
+          - focus-metavariable: $P
+    pattern-propagators:
+      - pattern: (StringBuilder $SB).append($X)
+        from: $X
+        to: $SB
+      - pattern: (StringBuffer $SB).append($X)
+        from: $X
+        to: $SB
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: Integer.parseInt(...)
+          - pattern: Integer.valueOf(...)
+          - pattern: Long.parseLong(...)
+          - pattern: Long.valueOf(...)
+          - pattern: Double.parseDouble(...)
+          - pattern: Boolean.parseBoolean(...)
+          - pattern: java.util.UUID.fromString(...)
+      # Rejected unless it is in an allowlist or matches a pattern: clean from there on.
+      - by-side-effect: true
+        patterns:
+          - pattern-either:
+              - pattern-inside: if (!$C.contains($X)) { ... }
+              - pattern-inside: if (!$C.contains($X)) $S;
+              - pattern-inside: if (!$X.matches($RE)) { ... }
+              - pattern-inside: if (!$X.matches($RE)) $S;
+          - pattern: $X
+    pattern-sinks:
+      # java.lang types are never imported, so match them by their simple name.
+      - pattern: (Runtime $R).exec(...)
+      - pattern: Runtime.getRuntime().exec(...)
+      - pattern: java.lang.Runtime.getRuntime().exec(...)
+      - pattern: new ProcessBuilder(...)
+      - pattern: new java.lang.ProcessBuilder(...)
+      - pattern: (ProcessBuilder $PB).command(...)
+      - pattern: (ProcessBuilder $PB).environment().put(...)

@@ -1,0 +1,151 @@
+{
+  "pass": true,
+  "suite": {
+    "repo": "OWASP-Benchmark/BenchmarkJava",
+    "commit": "10dfcc54ad02dcfcb358b0ba4a0fef8c919a6d17",
+    "sha256": "9bd7f125557e35c49af0040bed13eb19a9056c8f7a84719445826224227d022f",
+    "expected": "expectedresults-1.2.csv",
+    "scan": "src/main/java",
+    "ext": ".java",
+    "intrafile": true,
+    "url": "https://codeload.github.com/OWASP-Benchmark/BenchmarkJava/tar.gz/10dfcc54ad02dcfcb358b0ba4a0fef8c919a6d17"
+  },
+  "thresholds": {
+    "cmdi": 0.67,
+    "crypto": 0.74,
+    "hash": 0.69,
+    "ldapi": 0.67,
+    "pathtraver": 0.56,
+    "securecookie": 1,
+    "sqli": 0.67,
+    "trustbound": 0.4,
+    "weakrand": 1,
+    "xpathi": 0.78,
+    "xss": 0.75
+  },
+  "categories": {
+    "cmdi": {
+      "cwe": "CWE-78",
+      "covered": true,
+      "tp": 115,
+      "fp": 30,
+      "fn": 11,
+      "tn": 95,
+      "tpr": 0.913,
+      "fpr": 0.24,
+      "score": 0.673
+    },
+    "crypto": {
+      "cwe": "CWE-327",
+      "covered": true,
+      "tp": 97,
+      "fp": 0,
+      "fn": 33,
+      "tn": 116,
+      "tpr": 0.746,
+      "fpr": 0,
+      "score": 0.746
+    },
+    "hash": {
+      "cwe": "CWE-328",
+      "covered": true,
+      "tp": 89,
+      "fp": 0,
+      "fn": 40,
+      "tn": 107,
+      "tpr": 0.69,
+      "fpr": 0,
+      "score": 0.69
+    },
+    "ldapi": {
+      "cwe": "CWE-90",
+      "covered": true,
+      "tp": 24,
+      "fp": 7,
+      "fn": 3,
+      "tn": 25,
+      "tpr": 0.889,
+      "fpr": 0.219,
+      "score": 0.67
+    },
+    "pathtraver": {
+      "cwe": "CWE-22",
+      "covered": true,
+      "tp": 118,
+      "fp": 44,
+      "fn": 15,
+      "tn": 91,
+      "tpr": 0.887,
+      "fpr": 0.326,
+      "score": 0.561
+    },
+    "securecookie": {
+      "cwe": "CWE-614",
+      "covered": true,
+      "tp": 36,
+      "fp": 0,
+      "fn": 0,
+      "tn": 31,
+      "tpr": 1,
+      "fpr": 0,
+      "score": 1
+    },
+    "sqli": {
+      "cwe": "CWE-89",
+      "covered": true,
+      "tp": 255,
+      "fp": 60,
+      "fn": 17,
+      "tn": 172,
+      "tpr": 0.938,
+      "fpr": 0.259,
+      "score": 0.679
+    },
+    "trustbound": {
+      "cwe": "CWE-501",
+      "covered": true,
+      "tp": 72,
+      "fp": 20,
+      "fn": 11,
+      "tn": 23,
+      "tpr": 0.867,
+      "fpr": 0.465,
+      "score": 0.402
+    },
+    "weakrand": {
+      "cwe": "CWE-330",
+      "covered": true,
+      "tp": 218,
+      "fp": 0,
+      "fn": 0,
+      "tn": 275,
+      "tpr": 1,
+      "fpr": 0,
+      "score": 1
+    },
+    "xpathi": {
+      "cwe": "CWE-643",
+      "covered": true,
+      "tp": 14,
+      "fp": 3,
+      "fn": 1,
+      "tn": 17,
+      "tpr": 0.933,
+      "fpr": 0.15,
+      "score": 0.783
+    },
+    "xss": {
+      "cwe": "CWE-79",
+      "covered": true,
+      "tp": 220,
+      "fp": 30,
+      "fn": 26,
+      "tn": 179,
+      "tpr": 0.894,
+      "fpr": 0.144,
+      "score": 0.75
+    }
+  },
+  "failures": [],
+  "warnings": []
+}

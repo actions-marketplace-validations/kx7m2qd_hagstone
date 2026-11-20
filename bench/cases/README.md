@@ -18,15 +18,16 @@ Everything not labeled is expected to be clean. `npm run bench` scores:
 Write cases the way real code looks, not the way our rules look. Cases our rules miss are the point:
 they show where recall is lost. Include the realistic safe fix next to each bug.
 
-## OWASP Benchmark for Python (`npm run bench:owasp`)
+## OWASP Benchmark for Python and Java (`npm run bench:owasp`, `npm run bench:owasp:java`)
 
 `bench/owasp.ts` downloads [OWASP BenchmarkPython](https://github.com/OWASP-Benchmark/BenchmarkPython)
-at a pinned commit, checks its SHA-256 and caches it under the Hagstone cache directory. It is GPL-3.0,
-so it is never copied into this repo. Each test file is scored per category the OWASP way:
+or [BenchmarkJava](https://github.com/OWASP-Benchmark/BenchmarkJava) at a pinned commit, checks its
+SHA-256 and caches it under the Hagstone cache directory. They are GPL, so they are never copied into
+this repo. Java is scanned with `--taint-intrafile`, as in a real scan. Each test file is scored per category the OWASP way:
 **score = true-positive rate − false-positive rate** (0 = no better than guessing).
 
-Results go to `bench/results/owasp-python.json`. `bench/owasp-thresholds.json` holds a minimum score
-per category; raise a category's number when a rule improves it, and add a category once we have a
+Results go to `bench/results/owasp-<lang>.json`. `bench/owasp-thresholds.json` (Python) and
+`bench/owasp-thresholds-java.json` hold a minimum score per category; raise a category's number when a rule improves it, and add a category once we have a
 rule for it. There is no equivalent labelled suite for JavaScript, so JS is covered by the cases
 in this folder and by real CVE fixes.
 

@@ -1,0 +1,108 @@
+rules:
+  - id: java-sql-injection
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Request data is concatenated or formatted into a SQL string that is run through JDBC,
+      JdbcTemplate, JPA or Hibernate. An attacker can rewrite the query to read or modify any
+      data. Use a PreparedStatement with `?` placeholders (`ps.setString(1, name)`), JdbcTemplate
+      arguments (`jdbc.query("... WHERE id = ?", mapper, id)`) or JPA parameters (`:name` +
+      `setParameter`).
+    metadata:
+      title: SQL injection
+      cwe: ["CWE-89: Improper Neutralization of Special Elements used in an SQL Command"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: high
+      severity: critical
+    mode: taint
+    pattern-sources:
+      # Servlet request data (javax and jakarta).
+      - patterns:
+          - pattern-either:
+              - pattern: (javax.servlet.http.HttpServletRequest $REQ).$GET(...)
+              - pattern: (jakarta.servlet.http.HttpServletRequest $REQ).$GET(...)
+              - pattern: (javax.servlet.ServletRequest $REQ).$GET(...)
+              - pattern: (jakarta.servlet.ServletRequest $REQ).$GET(...)
+          - metavariable-regex:
+              metavariable: $GET
+              regex: ^(getParameter|getParameterValues|getParameterMap|getParameterNames|getHeader|getHeaders|getHeaderNames|getQueryString|getCookies|getInputStream|getReader|getPathInfo|getPart|getParts)$
+      # Spring MVC / JAX-RS handler parameters bound from the request (numbers, booleans and UUIDs can't carry an injection).
+      # The parameter itself (its declaration), so dataflow carries it and a guard can clean it.
+      - patterns:
+          - pattern-either:
+              - pattern: $RET $M(..., @$ANN $T $P, ...) { ... }
+              - pattern: $RET $M(..., @$ANN(...) $T $P, ...) { ... }
+          - metavariable-regex:
+              metavariable: $ANN
+              regex: ^(RequestParam|PathVariable|RequestHeader|CookieValue|RequestBody|ModelAttribute|MatrixVariable|RequestPart|QueryParam|PathParam|FormParam|HeaderParam|CookieParam|MatrixParam)$
+          - metavariable-regex:
+              metavariable: $T
+              regex: ^(?!(int|long|short|byte|double|float|boolean|char|Integer|Long|Short|Byte|Double|Float|Boolean|Character|BigInteger|BigDecimal|UUID|LocalDate|LocalDateTime|Instant)$)
+          - focus-metavariable: $P
+    pattern-propagators:
+      - pattern: (StringBuilder $SB).append($X)
+        from: $X
+        to: $SB
+      - pattern: (StringBuffer $SB).append($X)
+        from: $X
+        to: $SB
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: Integer.parseInt(...)
+          - pattern: Integer.valueOf(...)
+          - pattern: Long.parseLong(...)
+          - pattern: Long.valueOf(...)
+          - pattern: Double.parseDouble(...)
+          - pattern: Boolean.parseBoolean(...)
+          - pattern: java.util.UUID.fromString(...)
+      # Rejected unless it is in an allowlist or matches a pattern: clean from there on.
+      - by-side-effect: true
+        patterns:
+          - pattern-either:
+              - pattern-inside: if (!$C.contains($X)) { ... }
+              - pattern-inside: if (!$C.contains($X)) $S;
+              - pattern-inside: if (!$X.matches($RE)) { ... }
+              - pattern-inside: if (!$X.matches($RE)) $S;
+          - pattern: $X
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: (java.sql.Statement $S).$EXEC($SQL, ...)
+              - pattern: (java.sql.PreparedStatement $S).$EXEC($SQL, ...)
+              - pattern: (java.sql.CallableStatement $S).$EXEC($SQL, ...)
+              - pattern: $CONN.createStatement(...).$EXEC($SQL, ...)
+          - metavariable-regex:
+              metavariable: $EXEC
+              regex: ^(execute|executeQuery|executeUpdate|executeLargeUpdate|addBatch)$
+          - focus-metavariable: $SQL
+      - patterns:
+          - pattern-either:
+              - pattern: (java.sql.Connection $C).prepareStatement($SQL, ...)
+              - pattern: (java.sql.Connection $C).prepareCall($SQL, ...)
+              - pattern: (java.sql.Connection $C).nativeSQL($SQL)
+              - pattern: (org.springframework.jdbc.core.JdbcTemplate $J).$Q($SQL, ...)
+              - pattern: (org.springframework.jdbc.core.JdbcOperations $J).$Q($SQL, ...)
+              - pattern: (org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate $J).$Q($SQL, ...)
+              # Method names only JdbcTemplate uses, for receivers whose type isn't declared in this file.
+              - pattern: $J.queryForList($SQL, ...)
+              - pattern: $J.queryForObject($SQL, ...)
+              - pattern: $J.queryForMap($SQL, ...)
+              - pattern: $J.queryForRowSet($SQL, ...)
+              - pattern: $J.queryForStream($SQL, ...)
+              - pattern: $J.batchUpdate($SQL, ...)
+              # JdbcTemplate held somewhere this file can't see the type of (e.g. a static field
+              # of another class), recognised by its conventional name.
+              - patterns:
+                  - pattern: $J.$Q($SQL, ...)
+                  - metavariable-regex:
+                      metavariable: $J
+                      regex: (?i)^(.*\.)?\w*jdbc\w*$
+                  - metavariable-regex:
+                      metavariable: $Q
+                      regex: ^(query|update|execute|queryForList|queryForObject|queryForMap|queryForRowSet|queryForStream|batchUpdate)$
+              - pattern: (javax.persistence.EntityManager $E).$Q($SQL, ...)
+              - pattern: (jakarta.persistence.EntityManager $E).$Q($SQL, ...)
+              - pattern: (org.hibernate.Session $E).$Q($SQL, ...)
+              - pattern: $E.createNativeQuery($SQL, ...)
+              - pattern: $E.createSQLQuery($SQL, ...)
+          - focus-metavariable: $SQL

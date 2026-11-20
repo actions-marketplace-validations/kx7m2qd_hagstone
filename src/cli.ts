@@ -7,7 +7,7 @@ import { baselineCreate, baselinePrune, suppress, type CommandResult } from "./c
 import { gateSeverity, SEVERITY_ORDER, severityAtLeast, type EngineName, type Severity } from "./core/finding.js";
 import { enginePath, installEngine, isInstalled, resolveEngine } from "./engines/install.js";
 import { BINARY_ENGINES, ENGINES } from "./engines/manifest.js";
-import { RULES_DIR } from "./engines/opengrep.js";
+import { rulePasses } from "./engines/opengrep.js";
 import { runSyft, type SbomFormat } from "./engines/syft.js";
 import { loadIgnorePatterns } from "./core/ignore.js";
 import { run } from "./engines/run.js";
@@ -318,10 +318,21 @@ async function cmdHook(args: string[]): Promise<number> {
 
 async function cmdTestRules(): Promise<number> {
   const bin = await resolveEngine("opengrep", { autoInstall: true });
-  const res = await run(bin, ["test", RULES_DIR]);
-  process.stdout.write(res.stdout);
-  process.stderr.write(res.stderr);
-  return res.code;
+  // Same split as a scan: Java's rules are tested with the intrafile analysis they run with.
+  const { plain, intrafile } = rulePasses();
+  let code = 0;
+  for (const [dirs, flags] of [
+    [plain, []],
+    [intrafile, ["--taint-intrafile"]],
+  ] as const) {
+    for (const dir of dirs) {
+      const res = await run(bin, ["test", ...flags, dir]);
+      process.stdout.write(res.stdout);
+      process.stderr.write(res.stderr);
+      code ||= res.code;
+    }
+  }
+  return code;
 }
 
 async function cmdMcp(args: string[]): Promise<number> {

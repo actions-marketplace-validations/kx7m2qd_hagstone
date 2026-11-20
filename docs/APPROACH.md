@@ -67,7 +67,8 @@ platforms are strongest). The product goal is global either way.
 | Capability | Status | Engine (license to verify before wrapping) |
 |---|---|---|
 | SAST: JavaScript/TypeScript, Python | ✅ 40 rules, taint-aware | Opengrep + our rules |
-| SAST: Java, Go, C#, PHP, Kotlin, Ruby | ❌ | Opengrep + our rules |
+| SAST: Java | 🟡 11 rules (OWASP Benchmark for Java categories), same-file taint; no cross-file yet | Opengrep + our rules |
+| SAST: Go, C#, PHP, Kotlin, Ruby | ❌ | Opengrep + our rules |
 | SAST: C/C++ | ❌ (last: memory bugs need different analysis) | TBD |
 | Dependency vulnerabilities (SCA) + reachability | ✅ | OSV-Scanner |
 | Secrets | ✅ | Gitleaks |
@@ -141,6 +142,7 @@ test/           unit tests (vitest)
 - [x] Unit tests for the Finding model, ignore rules, engine normalizers, SARIF
 - [x] Grow rules to ~40 using the rule loop (§5) — 40 rules (JS + Python); every OWASP Python category has a rule
 - [x] OWASP Benchmark for Python: `npm run bench:owasp`, pinned + checksum-verified, per-category gate
+- [x] OWASP Benchmark for Java: `npm run bench:owasp:java` (2026-11-20), same gate; both run in CI
   (no labelled OWASP suite exists for JS)
 - [x] 20 real CVE fixes (npm + PyPI advisories): `npm run bench:cves`, vulnerable vs fixed file, pinned + verified
 
@@ -198,7 +200,9 @@ and provenance verified in CI (`engine-signatures.yml`) ✓. Open: a pinned-imag
 network + Grype's DB). Each: pinned + verified, normalized into
 `Finding`, benchmark cases.
 
-**Step 3 — SAST depth.**
+**Step 3 — SAST depth.** Java started 2026-11-20 (spec `docs/specs/java-sast.md`): 11 rules covering
+the OWASP Benchmark for Java's categories, average score 0.72 with a per-category gate; Spring app
+bench case. Measured gap: cross-file taint (controller → repository) — Opengrep has none, so it is next.
 - Languages, in order: **Java** (Spring, eGovFrame; gate on the OWASP Benchmark for Java), **Go**,
   then C#, PHP, Kotlin, Ruby; **C/C++** last (memory bugs need a different kind of analysis).
   Each language gets real-CVE-fix benchmark cases like `bench:cves`.

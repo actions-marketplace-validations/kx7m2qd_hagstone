@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
+import { resolve as resolvePath } from "node:path";
 import { parseArgs } from "node:util";
 import { itemsFromSarif, report } from "./action/github.js";
 import { baselineCreate, baselinePrune, suppress, type CommandResult } from "./commands/baseline.js";
@@ -7,6 +8,8 @@ import { gateSeverity, SEVERITY_ORDER, severityAtLeast, type EngineName, type Se
 import { enginePath, installEngine, isInstalled, resolveEngine } from "./engines/install.js";
 import { BINARY_ENGINES, ENGINES } from "./engines/manifest.js";
 import { RULES_DIR } from "./engines/opengrep.js";
+import { runSyft, type SbomFormat } from "./engines/syft.js";
+import { loadIgnorePatterns } from "./core/ignore.js";
 import { run } from "./engines/run.js";
 import { install, uninstall } from "./hook/install.js";
 import { hookRun } from "./hook/run.js";
@@ -20,7 +23,7 @@ import { TOOL_NAME, TOOL_VERSION } from "./version.js";
 const HELP = `${TOOL_NAME} ${TOOL_VERSION} — local-first application security scanner
 
 Usage:
-  ${TOOL_NAME} scan [path]          Scan code, dependencies, secrets and IaC (default path: .)
+  ${TOOL_NAME} scan [path]          Scan code, dependencies, secrets, IaC and licenses (default path: .)
       --format text|json|sarif     Output format (default: text)
       --output <file>              Write the report to a file instead of stdout
       --fail-on <severity|none>    Exit 1 if a finding is at least this severe (default: high)
@@ -45,10 +48,18 @@ Usage:
       --baseline <file>            Apply this baseline instead of <path>/.hagstone/baseline.json
                                    (CI: pass the base branch's copy so a PR can't hide its own findings)
       --no-baseline                Ignore the baseline: report and gate on every finding
+      --license-policy <file>      Apply this license policy instead of <path>/.hagstone/licenses.json
+                                   ({"allow": [...], "deny": [...]}; CI: pass the base branch's copy).
+                                   Default: AGPL/SSPL (high), GPL (medium), non-commercial (high).
 
   pkgrisk (dependency supply-chain checks) sends package names and versions, nothing else, to
-  registry.npmjs.org and pypi.org (osv-scanner already sends the same to osv.dev). Source code, file
-  paths and manifest contents never leave your machine. Use --offline to send nothing.
+  registry.npmjs.org and pypi.org (osv-scanner already sends the same to osv.dev), and syft looks up
+  Python package licenses on pypi.org. Source code, file paths and manifest contents never leave
+  your machine. Use --offline to send nothing.
+
+  ${TOOL_NAME} sbom [path] [--format cyclonedx|spdx] [--output <file>] [--offline]
+                                    Write an SBOM of the project's shipped dependencies (Syft;
+                                    CycloneDX JSON by default, or SPDX JSON).
 
   ${TOOL_NAME} baseline create [path] [--force]
                                     Snapshot every current finding into .hagstone/baseline.json (commit
@@ -122,6 +133,7 @@ async function cmdScan(args: string[]): Promise<number> {
       "include-hardening": { type: "boolean", default: false },
       baseline: { type: "string" },
       "no-baseline": { type: "boolean", default: false },
+      "license-policy": { type: "string" },
     },
   });
   const format = values.format;
@@ -140,6 +152,7 @@ async function cmdScan(args: string[]): Promise<number> {
     includeHardening: values["include-hardening"],
     baseline: values.baseline,
     noBaseline: values["no-baseline"],
+    licensePolicy: values["license-policy"],
   });
 
   const report =
@@ -164,6 +177,30 @@ async function cmdScan(args: string[]): Promise<number> {
   if (result.engines.some((e) => !e.ok)) return 2;
   const trust = values["trust-reachability"];
   if (failOn !== "none" && result.findings.some((f) => severityAtLeast(gateSeverity(f, trust), failOn as Severity))) return 1;
+  return 0;
+}
+
+async function cmdSbom(args: string[]): Promise<number> {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      format: { type: "string", default: "cyclonedx" },
+      output: { type: "string" },
+      offline: { type: "boolean", default: false },
+      "no-install": { type: "boolean", default: false },
+    },
+  });
+  const format = values.format as SbomFormat;
+  if (format !== "cyclonedx" && format !== "spdx") fail(`unknown SBOM format "${values.format}" (cyclonedx or spdx)`);
+  if (positionals.length > 1) fail(`usage: ${TOOL_NAME} sbom [path] [--format cyclonedx|spdx] [--output <file>] [--offline]`);
+  const root = resolvePath(positionals[0] ?? ".");
+  const bin = await resolveEngine("syft", { autoInstall: !values["no-install"] });
+  const sbom = await runSyft(bin, root, await loadIgnorePatterns(root), { format, offline: values.offline });
+  if (values.output) {
+    await writeFile(values.output, sbom);
+    process.stderr.write(`${TOOL_NAME}: wrote a ${format === "cyclonedx" ? "CycloneDX" : "SPDX"} SBOM to ${values.output}\n`);
+  } else await writeStdout(sbom);
   return 0;
 }
 
@@ -317,6 +354,8 @@ async function main(argv: string[]): Promise<number> {
   switch (command) {
     case "scan":
       return cmdScan(rest);
+    case "sbom":
+      return cmdSbom(rest);
     case "engines":
       return cmdEngines(rest);
     case "baseline":

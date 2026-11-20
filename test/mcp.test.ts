@@ -196,7 +196,7 @@ describe("scan tool", () => {
     const { body, calls } = await scanVia(dir, { offline: true });
     expect(calls.map((c) => [c.target === dir, c.opts.engines])).toEqual([
       [false, ["opengrep", "gitleaks", "trivy"]],
-      [true, ["osv-scanner", "pkgrisk"]],
+      [true, ["osv-scanner", "pkgrisk", "syft"]],
     ]);
     expect(calls[1]!.opts.offline).toBe(true);
     expect(body.warnings[0]).toMatch(/dependency manifest changed/);

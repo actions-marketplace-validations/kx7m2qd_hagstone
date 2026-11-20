@@ -1,15 +1,15 @@
 {
   "pass": true,
   "precision": 1,
-  "recall": 0.984,
+  "recall": 0.985,
   "thresholds": {
     "precision": 0.95,
     "recall": 0.85
   },
   "totals": {
-    "labels": 62,
-    "findings": 61,
-    "tp": 61,
+    "labels": 68,
+    "findings": 67,
+    "tp": 67,
     "fp": 0,
     "fn": 1
   },
@@ -198,6 +198,27 @@
     },
     "KSV-0017": {
       "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "license-copyleft": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "license-network-copyleft": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "license-non-commercial": {
+      "tp": 2,
       "fp": 0,
       "fn": 0,
       "precision": 1,

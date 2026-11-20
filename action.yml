@@ -135,6 +135,15 @@ runs:
               echo "::warning file=${prefix}.hagstone/baseline.json::This pull request changes the Hagstone baseline. The check used the base branch's version; the change takes effect after merge."
             fi
           fi
+
+          # And for the license policy: a PR must not be able to allow the license it adds.
+          base_licenses="$RUNNER_TEMP/hagstone-base-licenses.json"
+          git -C "$IN_PATH" show "$BASE_SHA:${prefix}.hagstone/licenses.json" > "$base_licenses" 2>/dev/null || : > "$base_licenses"
+          args+=(--license-policy "$base_licenses")
+          head_licenses="$IN_PATH/.hagstone/licenses.json"
+          if { [ -f "$head_licenses" ] || [ -s "$base_licenses" ]; } && ! cmp -s "$base_licenses" "$head_licenses" 2>/dev/null; then
+            echo "::warning file=${prefix}.hagstone/licenses.json::This pull request changes the Hagstone license policy. The check used the base branch's version; the change takes effect after merge."
+          fi
         fi
 
         [ "$IN_TRUST" = "true" ] && args+=(--trust-reachability)

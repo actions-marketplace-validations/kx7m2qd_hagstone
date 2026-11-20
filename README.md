@@ -1,10 +1,10 @@
 # Hagstone
 
 Local-first application security scanner. One command runs SAST, dependency vulnerability, secret,
-supply-chain and infrastructure-as-code checks, and reports everything as a single list of findings.
+supply-chain, infrastructure-as-code and license checks, and reports everything as a single list of findings.
 
-Your source code never leaves your machine or CI runner. The supply-chain checks send package names
-and versions to npm and PyPI and nothing else, and `--offline` turns those lookups off too.
+Your source code never leaves your machine or CI runner. The supply-chain and license checks send package
+names and versions to npm and PyPI and nothing else, and `--offline` turns those lookups off too.
 
 - **Code:** taint-aware [Opengrep](https://github.com/opengrep/opengrep) rules for JavaScript/TypeScript
   and Python. Every rule ships with tests and maps to a CWE and an OWASP category.
@@ -19,6 +19,10 @@ and versions to npm and PyPI and nothing else, and `--offline` turns those looku
   best-practice hardening checks are counted, and `--include-hardening` shows them. Inline
   `trivy:ignore` comments in the scanned repo are not honoured, and remote Terraform modules are
   never downloaded.
+- **Licenses and SBOM:** [Syft](https://github.com/anchore/syft) catalogs the shipped dependencies.
+  AGPL/SSPL, GPL and non-commercial licenses are reported (`A OR B` is fine if either option is);
+  `.hagstone/licenses.json` (`{"allow": [...], "deny": [...]}`) adjusts that. `hagstone sbom` writes a
+  CycloneDX or SPDX SBOM.
 
 Engine binaries are pinned by version and SHA-256, and Hagstone checks them on every run.
 
@@ -41,6 +45,7 @@ Linux x64 and macOS arm64.
 ```sh
 hagstone scan [path]                 # text report; exits 1 on findings at or above --fail-on (default: high)
 hagstone scan --format sarif --output hagstone.sarif
+hagstone sbom --output sbom.cdx.json # CycloneDX SBOM (--format spdx for SPDX)
 hagstone hook install                # pre-commit hook: scans staged changes for code issues and secrets
 hagstone mcp                         # MCP server for coding agents (scan, explain, check_package)
 hagstone --help                      # every flag

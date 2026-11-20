@@ -1,0 +1,23 @@
+{
+  "name": "invoice-service",
+  "version": "1.0.0",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.1",
+    "pdf-stamp": "^2.1.0",
+    "chart-render": "^5.0.3",
+    "dual-licensed-lib": "^1.4.0",
+    "both-apply": "^0.9.1",
+    "libphone": "^3.2.0",
+    "jsonpath-plus": "^10.2.0",
+    "graph-db-client": "^1.0.0",
+    "java-bridge": "^2.0.0",
+    "icon-pack": "^4.0.0",
+    "search-sdk": "^8.1.0",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "eslint-plugin-gpl-thing": "^1.0.0"
+  }
+}

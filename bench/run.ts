@@ -11,6 +11,7 @@ import { DEFAULT_IGNORES, isIgnored } from "../src/core/ignore.js";
 import { resolveEngine } from "../src/engines/install.js";
 import { runOpengrep } from "../src/engines/opengrep.js";
 import { runPkgrisk } from "../src/engines/pkgrisk/index.js";
+import { EMPTY_POLICY, runSyftLicenses } from "../src/engines/syft.js";
 import { runTrivy } from "../src/engines/trivy.js";
 import type { FetchLike } from "../src/engines/pkgrisk/registry.js";
 import { applyReachability } from "../src/reachability/index.js";
@@ -91,6 +92,18 @@ async function supplyChain(): Promise<{ expected: string[]; got: string[]; warni
   const out = await runPkgrisk(dir, DEFAULT_IGNORES, { fetch, now: () => now, sleep: async () => {}, cacheDir: undefined });
   const got = out.findings.map((f) => `${f.ruleId} ${f.dependency?.ecosystem} ${f.dependency?.name}`);
   return { expected: spec.expected, got, warnings: out.warnings };
+}
+
+/**
+ * bench/cases/licenses: syft offline (licenses come from the lockfiles) with the default policy.
+ * Expected findings live in expected.json as "<rule> <package>".
+ */
+async function licenses(): Promise<{ expected: string[]; got: string[]; warnings: string[] }> {
+  const dir = join(CASES_DIR, "licenses");
+  const spec = JSON.parse(await readFile(join(dir, "expected.json"), "utf8")) as { expected: string[] };
+  const bin = await resolveEngine("syft", { autoInstall: true });
+  const out = await runSyftLicenses(bin, dir, DEFAULT_IGNORES, { offline: true, policy: EMPTY_POLICY });
+  return { expected: spec.expected, got: out.findings.map((f) => `${f.ruleId} ${f.dependency?.name}`), warnings: out.warnings };
 }
 
 /**
@@ -180,6 +193,11 @@ async function main(): Promise<number> {
   const missedText = missed.map((l) => `${l.path}:${l.line} ${l.ruleId}`);
 
   const sc = await supplyChain();
+  const lic = await licenses();
+  // Scored with the supply-chain cases: "<rule> …" strings, rule first.
+  sc.expected.push(...lic.expected);
+  sc.got.push(...lic.got);
+  sc.warnings.push(...lic.warnings);
   let scTp = 0;
   for (const g of sc.got) {
     const rule = g.split(" ")[0] as string;

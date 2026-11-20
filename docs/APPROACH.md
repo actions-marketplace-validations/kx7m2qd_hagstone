@@ -74,7 +74,7 @@ platforms are strongest). The product goal is global either way.
 | Supply chain (malicious, typosquat, install scripts) | ✅ | pkgrisk (ours) |
 | Infrastructure as code (Terraform, Kubernetes, Dockerfile, Helm, CloudFormation) | ✅ exposures only; hardening hidden | Trivy (Apache-2.0; KICS/Checkov can't be pinned) |
 | Container images | ❌ (designed) | Syft → Grype (Apache-2.0) |
-| SBOM (CycloneDX / SPDX), license compliance | ❌ (designed) | Syft (Apache-2.0) |
+| SBOM (CycloneDX / SPDX), license compliance | ✅ | Syft (Apache-2.0) |
 | DAST: running web apps | ❌ | ZAP + Nuclei |
 | API security (OpenAPI-driven) | ❌ | ZAP |
 | Access-control testing (multi-role IDOR) | ❌ | ours |
@@ -108,7 +108,8 @@ platforms are strongest). The product goal is global either way.
       ├─ engines/gitleaks   → secrets                     │
       ├─ engines/pkgrisk    → supply chain                ├─ normalize → Finding[] → scope / ignore / dedupe
       ├─ engines/trivy      → IaC (sanitized copy)        │
-      ├─ (planned) containers, SBOM + licenses            │        → reachability → baseline
+      ├─ engines/syft       → licenses; `hagstone sbom`   │
+      ├─ (planned) container images (Syft → Grype)        │        → reachability → baseline
       │                                                   │                  │
  hagstone dast <url>  (planned; running app in the        │                  ├─ correlate (DAST ↔ SAST)
       └─ ZAP, Nuclei, access-control agent  customer's CI)┘                  ├─ report: text / json / sarif / PR
@@ -188,8 +189,9 @@ Design (agreed 2026-11-18): one committed file (`.hagstone/baseline.json`) holdi
 **Step 2 — IaC, containers, SBOM + licenses.** Spec `docs/specs/iac-containers-sbom.md` (engines chosen
 2026-11-20 after the license + pinning check). IaC via Trivy ✓ built 2026-11-20 (exposures reported,
 hardening hidden, repo can't silence checks or trigger module downloads; bench cases in
-`bench/cases/iac/`). Next: Syft (CycloneDX / SPDX SBOM, license compliance; later VEX, AI-BOM and
-Cosign signing), then container images (Syft → Grype). Each: pinned + verified, normalized into
+`bench/cases/iac/`). Licenses + SBOM via Syft ✓ built 2026-11-20 (`.hagstone/licenses.json` policy,
+base-branch copy in the Action; `hagstone sbom`; later VEX, AI-BOM and Cosign signing). Next:
+container images (Syft → Grype). Each: pinned + verified, normalized into
 `Finding`, benchmark cases.
 
 **Step 3 — SAST depth.**

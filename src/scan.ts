@@ -1,4 +1,4 @@
-import { relative, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { applyBaseline, BASELINE_FILE, defaultBaselinePath, loadBaseline, today, type BaselineSummary } from "./core/baseline.js";
 import { dedupe, sortFindings, type EngineName, type Finding } from "./core/finding.js";
 import { DEFAULT_IGNORES, isIgnored, loadIgnorePatterns } from "./core/ignore.js";
@@ -9,11 +9,12 @@ import type { BinaryEngine } from "./engines/manifest.js";
 import { runOpengrep } from "./engines/opengrep.js";
 import { runOsv } from "./engines/osv.js";
 import { runPkgrisk } from "./engines/pkgrisk/index.js";
+import { LICENSE_POLICY_FILE, loadLicensePolicy, runSyftLicenses } from "./engines/syft.js";
 import { runTrivy } from "./engines/trivy.js";
 import type { EngineOutput } from "./engines/types.js";
 import { applyReachability } from "./reachability/index.js";
 
-export const ALL_ENGINES: EngineName[] = ["opengrep", "osv-scanner", "gitleaks", "pkgrisk", "trivy"];
+export const ALL_ENGINES: EngineName[] = ["opengrep", "osv-scanner", "gitleaks", "pkgrisk", "trivy", "syft"];
 
 export interface ScanOptions {
   engines?: EngineName[];
@@ -28,6 +29,11 @@ export interface ScanOptions {
   ignoreFile?: string;
   /** Report code and dependency findings in test and example paths too (default: hidden and counted). */
   includeTests?: boolean;
+  /**
+   * License policy to apply instead of `<root>/.hagstone/licenses.json` (missing or empty file →
+   * defaults only). CI passes the base branch's copy so a PR can't allow the license it adds.
+   */
+  licensePolicy?: string;
   /** Report IaC hardening checks too (LOW and config/iac-hardening.json; default: hidden and counted). */
   includeHardening?: boolean;
   /** Baseline file to apply instead of `<root>/.hagstone/baseline.json` (missing file → none). */
@@ -74,7 +80,7 @@ export interface ScanResult {
  */
 export function hiddenByScope(f: Finding): boolean {
   if (!f.scope) return false;
-  if (f.category === "code" || f.category === "iac") return true;
+  if (f.category === "code" || f.category === "iac" || f.category === "license") return true;
   return f.category === "dependency" && f.engine === "osv-scanner" && f.ruleId !== "pkg-known-malicious";
 }
 
@@ -84,10 +90,14 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
   const engines = opts.engines ?? ALL_ENGINES;
   const autoInstall = opts.autoInstall ?? true;
 
+  const policyPath = opts.licensePolicy ? resolve(opts.licensePolicy) : join(root, LICENSE_POLICY_FILE);
+  const license = engines.includes("syft") ? await loadLicensePolicy(policyPath) : undefined;
+
   const runners: Partial<Record<BinaryEngine, (bin: string) => Promise<EngineOutput>>> = {
     opengrep: (bin) => runOpengrep(bin, root, ignores),
     "osv-scanner": (bin) => runOsv(bin, root),
     gitleaks: (bin) => runGitleaks(bin, root),
+    syft: (bin) => runSyftLicenses(bin, root, ignores, { offline: opts.offline ?? false, policy: license!.policy }),
     trivy: (bin) => runTrivy(bin, root, ignores, { includeHardening: opts.includeHardening ?? false }),
   };
 
@@ -121,6 +131,7 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
     const v = overrideVar(engine);
     if (process.env[v]) warnings.push(`${engine}: using ${v}=${process.env[v]}, which is not checksum-verified`);
   }
+  if (license?.error) warnings.push(`license policy ${relative(root, policyPath) || policyPath} not applied (${license.error}); using the defaults`);
   const statuses: EngineStatus[] = [];
   for (const o of outcomes) {
     if ("error" in o) {

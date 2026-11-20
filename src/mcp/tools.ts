@@ -20,7 +20,7 @@ const MAX_LIMIT = 200;
 /** Bigger files are skipped in changed/paths scans: generated or minified, slow for Opengrep. */
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
 const CODE_ENGINES: EngineName[] = ["opengrep", "gitleaks", "trivy"];
-const DEP_ENGINES: EngineName[] = ["osv-scanner", "pkgrisk"];
+const DEP_ENGINES: EngineName[] = ["osv-scanner", "pkgrisk", "syft"];
 const MANIFEST =
   /^(package\.json|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|requirements[^/]*\.txt|pyproject\.toml|Pipfile(\.lock)?|poetry\.lock|uv\.lock|setup\.py|setup\.cfg)$/;
 

@@ -1,0 +1,11 @@
+{
+  "_doc": "Expected license findings for npm-app: '<rule> <package>'. Offline (licenses come from package-lock.json). Not expected: MIT OR GPL (MIT can be chosen), LGPL, GPL WITH Classpath-exception, the GPL dev dependency.",
+  "expected": [
+    "license-network-copyleft pdf-stamp",
+    "license-copyleft chart-render",
+    "license-copyleft both-apply",
+    "license-non-commercial graph-db-client",
+    "license-non-commercial icon-pack",
+    "license-network-copyleft search-sdk"
+  ]
+}

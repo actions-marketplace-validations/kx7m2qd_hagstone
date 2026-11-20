@@ -80,14 +80,30 @@ hardening-only resources that must report nothing. Scored by `npm run bench` tog
 cases (precision / recall gate). Also tests the untrusted-repo defenses: an inline `trivy:ignore` on
 a labeled line must not hide it, and a remote module must not be fetched.
 
-## 2. SBOM + licenses (Syft) — next milestone
-- `hagstone sbom [path] [--format cyclonedx|spdx] [--output <file>]`: Syft's SBOM of the directory
-  (or `--image <ref>`), unchanged except that Hagstone is added as a tool.
-- License findings (`category: "license"`, `engine: "syft"`) from a policy: built-in default (strong
-  network copyleft — AGPL, SSPL — and GPL in shipped dependencies) overridable by
-  `.hagstone/licenses.json` (allow / deny lists of SPDX ids). Applied like the baseline: the Action
-  reads the base branch's copy. Dev-only dependencies and test scope follow the existing rules.
-- One finding per package version, fingerprint (`syft`, ecosystem, name, version, license expression).
+## 2. SBOM + licenses (Syft) — built 2026-11-20
+- `hagstone sbom [path] [--format cyclonedx|spdx] [--output <file>] [--offline]`: Syft's SBOM of the
+  directory, unchanged. Image SBOMs come with the container milestone.
+- Syft's own config (written per run, `--config`; cwd is an empty dir): no update check, no Go
+  tooling (`use-packages-lib` would run `go` on the repo), no Maven / Go-proxy / git-clone lookups, no
+  dev dependencies (they don't ship). Only PyPI license metadata is fetched (names only, like
+  pkgrisk); `--offline` turns that off. npm licenses come from `package-lock.json`.
+- License findings (`category: "license"`, `engine: "syft"`, one per package version; fingerprint
+  `syft`, ecosystem, name, version, license):
+  | rule | licenses | severity |
+  |---|---|---|
+  | `license-network-copyleft` | AGPL, SSPL | high |
+  | `license-copyleft` | GPL (not LGPL; not GPL WITH a linking exception such as Classpath) | medium |
+  | `license-non-commercial` | CC-BY-NC, BUSL, Elastic-2.0, Commons Clause, PolyForm-Noncommercial | high |
+  | `license-denied` | anything in the policy's `deny` list | high |
+- Names are matched by pattern, not only SPDX ids: PyPI reports "GPL", "BSD", "GNU General Public
+  License v2 (GPLv2)". `A OR B` → you choose, so only a problem if every option is (then the mildest);
+  `A AND B` → the worst part. Several license entries on one package are alternatives.
+- `.hagstone/licenses.json` `{"allow": [...], "deny": [...]}`, case-insensitive: allow beats the
+  defaults, deny adds `license-denied`. `--license-policy <file>` reads another file; the Action passes
+  the base branch's copy and warns when a PR changes it. Malformed file → warning, defaults apply.
+- Packages without license data are counted in one warning, not reported. GitHub Actions found in
+  workflows are skipped (they don't ship). Test and example lockfiles are hidden by default.
+- Bench: `bench/cases/licenses/` (offline; expected.json), scored with the supply-chain cases.
 
 ## 3. Container images (Syft → Grype) — milestone after SBOM
 - `hagstone scan --image <ref>` (registry or `docker:` / `oci-archive:` / tar): Syft catalogs the

@@ -58,9 +58,12 @@ Common weaknesses across these tools, and our answers:
    guidelines (e.g. Korea's 행정안전부 소프트웨어 개발보안 가이드, from general knowledge: verify), and
    certification such as Common Criteria.
 
-**Open decision:** which country or region to focus sales on first (e.g. Korea, where Sparrow is strongest
-and guideline mapping, Korean reports and CC become requirements; or the US / EU, where the developer-first
-platforms are strongest). The product goal is global either way.
+**Decided (2026-11-25): India first**, then other regions gradually; the product goal stays global.
+Implications to verify before building: compliance mappings for Indian frameworks (CERT-In directions,
+the DPDP Act and its rules, RBI and SEBI cyber-security frameworks for BFSI), detection of Indian
+service credentials and personal identifiers (Aadhaar, PAN) in code and logs, and the stacks common
+there (Java/Spring in BFSI and services, Node and Python in startups). Korea-specific work (eGovFrame,
+the Korean guideline) moves later.
 
 ### Coverage (the "complete" checklist)
 
@@ -211,7 +214,7 @@ injection misses. Next: rules for XXE, deserialization, SSRF, open redirect, SpE
   proven by the benchmark (not a rule count).
 - Cross-file taint: Java has our own summary layer (`java-xfile.ts`); reuse that design for the next
   languages before reaching for a deeper engine.
-- Rule metadata gains local guideline mappings (e.g. the Korean secure-coding guideline item) alongside
+- Rule metadata gains local guideline mappings (Indian frameworks first; see the market decision) alongside
   CWE and OWASP, starting with whichever market we focus on first.
 - AI-app rules, continuing: LLM output → SQL/shell/eval sinks, prompt-injection paths, unsafe model
   loading (pickle / `torch.load`), over-permissioned MCP server configs (started:

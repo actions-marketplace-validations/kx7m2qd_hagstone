@@ -1,5 +1,6 @@
 import { readdirSync } from "node:fs";
-import { join } from "node:path";
+import { rm } from "node:fs/promises";
+import { join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   collapseOverlaps,
@@ -10,6 +11,7 @@ import {
   type Finding,
   type Severity,
 } from "../core/finding.js";
+import { buildJavaXfile, relocate, type OgMetavars } from "./java-xfile.js";
 import { toRelative } from "./paths.js";
 import { run } from "./run.js";
 import type { EngineOutput } from "./types.js";
@@ -56,6 +58,7 @@ interface OgResult {
     severity: string;
     lines?: string;
     metadata?: Record<string, unknown>;
+    metavars?: OgMetavars;
     dataflow_trace?: {
       taint_source?: OgCliLoc;
       intermediate_vars?: { location: OgLoc; content: string }[];
@@ -113,8 +116,11 @@ function dataflow(root: string, r: OgResult, clean: (s: string) => string): Data
   const t = r.extra.dataflow_trace;
   if (!t) return undefined;
   const steps: DataflowStep[] = [];
-  const push = (loc: OgLoc, snippet: string) =>
-    steps.push({ path: toRelative(root, loc.path), line: loc.start.line, snippet: clean(snippet) });
+  const push = (loc: OgLoc, snippet: string) => {
+    const step = { path: toRelative(root, loc.path), line: loc.start.line, snippet: clean(snippet) };
+    const last = steps[steps.length - 1];
+    if (last?.path !== step.path || last.line !== step.line || last.snippet !== step.snippet) steps.push(step);
+  };
   if (t.taint_source?.[0] === "CliLoc") push(...t.taint_source[1]);
   for (const v of t.intermediate_vars ?? []) push(v.location, v.content);
   if (t.taint_sink?.[0] === "CliLoc") push(...t.taint_sink[1]);
@@ -180,6 +186,8 @@ export interface OpengrepOptions {
   config?: string;
   /** Follow taint through functions in the same file (`--taint-intrafile`). */
   taintIntrafile?: boolean;
+  /** `config` is the Java rules: add cross-file summaries (`java-xfile.ts`). On by default for Java. */
+  javaCrossFile?: boolean;
 }
 
 async function runOnce(bin: string, root: string, ignores: string[], configs: string[], intrafile: boolean): Promise<OgOutput> {
@@ -207,15 +215,32 @@ async function runOnce(bin: string, root: string, ignores: string[], configs: st
   return JSON.parse(res.stdout) as OgOutput;
 }
 
-export async function runOpengrep(bin: string, root: string, ignores: string[], opts: OpengrepOptions = {}): Promise<EngineOutput> {
-  const passes: [string[], boolean][] = [];
-  if (opts.config) passes.push([[opts.config], !!opts.taintIntrafile]);
-  else {
-    const { plain, intrafile } = rulePasses();
-    if (plain.length) passes.push([plain, false]);
-    if (intrafile.length) passes.push([intrafile, true]);
+/** The Java pass: summaries first, then the rules with them injected; findings moved to the inner sink. */
+async function runJava(bin: string, root: string, ignores: string[], javaDir: string): Promise<OgOutput> {
+  const xf = await buildJavaXfile(root, ignores, javaDir, async (dir) => (await runOnce(bin, root, ignores, [dir], true)).results);
+  if (!xf) return runOnce(bin, root, ignores, [javaDir], true);
+  try {
+    const out = await runOnce(bin, root, ignores, [xf.rulesDir], true);
+    relocate(out.results, xf.sinks);
+    return out;
+  } finally {
+    await rm(xf.rulesDir, { recursive: true, force: true });
   }
-  const outs = await Promise.all(passes.map(([configs, intra]) => runOnce(bin, root, ignores, configs, intra)));
+}
+
+export async function runOpengrep(bin: string, root: string, ignores: string[], opts: OpengrepOptions = {}): Promise<EngineOutput> {
+  const passes: (() => Promise<OgOutput>)[] = [];
+  if (opts.config) {
+    const config = opts.config;
+    passes.push(() => (opts.javaCrossFile ? runJava(bin, root, ignores, config) : runOnce(bin, root, ignores, [config], !!opts.taintIntrafile)));
+  } else {
+    const { plain, intrafile } = rulePasses();
+    if (plain.length) passes.push(() => runOnce(bin, root, ignores, plain, false));
+    for (const dir of intrafile) {
+      passes.push(() => (dir.endsWith(`${sep}java`) ? runJava(bin, root, ignores, dir) : runOnce(bin, root, ignores, [dir], true)));
+    }
+  }
+  const outs = await Promise.all(passes.map((p) => p()));
   const findings = outs.flatMap((out) => normalizeOpengrep(root, out));
   const warnings = [...new Set(outs.flatMap((out) => out.errors.map((e) => describeError(root, e))))];
   return { findings: collapseOverlaps(findings), warnings };

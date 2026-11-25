@@ -11,29 +11,29 @@
     "url": "https://codeload.github.com/OWASP-Benchmark/BenchmarkJava/tar.gz/10dfcc54ad02dcfcb358b0ba4a0fef8c919a6d17"
   },
   "thresholds": {
-    "cmdi": 0.67,
+    "cmdi": 0.73,
     "crypto": 0.74,
     "hash": 0.69,
-    "ldapi": 0.67,
-    "pathtraver": 0.56,
+    "ldapi": 0.75,
+    "pathtraver": 0.64,
     "securecookie": 1,
-    "sqli": 0.67,
-    "trustbound": 0.4,
+    "sqli": 0.72,
+    "trustbound": 0.53,
     "weakrand": 1,
-    "xpathi": 0.78,
-    "xss": 0.75
+    "xpathi": 0.75,
+    "xss": 0.85
   },
   "categories": {
     "cmdi": {
       "cwe": "CWE-78",
       "covered": true,
-      "tp": 115,
-      "fp": 30,
-      "fn": 11,
-      "tn": 95,
-      "tpr": 0.913,
-      "fpr": 0.24,
-      "score": 0.673
+      "tp": 126,
+      "fp": 33,
+      "fn": 0,
+      "tn": 92,
+      "tpr": 1,
+      "fpr": 0.264,
+      "score": 0.736
     },
     "crypto": {
       "cwe": "CWE-327",
@@ -60,24 +60,24 @@
     "ldapi": {
       "cwe": "CWE-90",
       "covered": true,
-      "tp": 24,
-      "fp": 7,
-      "fn": 3,
-      "tn": 25,
-      "tpr": 0.889,
-      "fpr": 0.219,
-      "score": 0.67
+      "tp": 27,
+      "fp": 8,
+      "fn": 0,
+      "tn": 24,
+      "tpr": 1,
+      "fpr": 0.25,
+      "score": 0.75
     },
     "pathtraver": {
       "cwe": "CWE-22",
       "covered": true,
-      "tp": 118,
-      "fp": 44,
-      "fn": 15,
-      "tn": 91,
-      "tpr": 0.887,
-      "fpr": 0.326,
-      "score": 0.561
+      "tp": 133,
+      "fp": 48,
+      "fn": 0,
+      "tn": 87,
+      "tpr": 1,
+      "fpr": 0.356,
+      "score": 0.644
     },
     "securecookie": {
       "cwe": "CWE-614",
@@ -93,24 +93,24 @@
     "sqli": {
       "cwe": "CWE-89",
       "covered": true,
-      "tp": 255,
-      "fp": 60,
-      "fn": 17,
-      "tn": 172,
-      "tpr": 0.938,
-      "fpr": 0.259,
-      "score": 0.679
+      "tp": 272,
+      "fp": 63,
+      "fn": 0,
+      "tn": 169,
+      "tpr": 1,
+      "fpr": 0.272,
+      "score": 0.728
     },
     "trustbound": {
       "cwe": "CWE-501",
       "covered": true,
-      "tp": 72,
+      "tp": 83,
       "fp": 20,
-      "fn": 11,
+      "fn": 0,
       "tn": 23,
-      "tpr": 0.867,
+      "tpr": 1,
       "fpr": 0.465,
-      "score": 0.402
+      "score": 0.535
     },
     "weakrand": {
       "cwe": "CWE-330",
@@ -126,24 +126,24 @@
     "xpathi": {
       "cwe": "CWE-643",
       "covered": true,
-      "tp": 14,
-      "fp": 3,
-      "fn": 1,
-      "tn": 17,
-      "tpr": 0.933,
-      "fpr": 0.15,
-      "score": 0.783
+      "tp": 15,
+      "fp": 5,
+      "fn": 0,
+      "tn": 15,
+      "tpr": 1,
+      "fpr": 0.25,
+      "score": 0.75
     },
     "xss": {
       "cwe": "CWE-79",
       "covered": true,
-      "tp": 220,
-      "fp": 30,
-      "fn": 26,
-      "tn": 179,
-      "tpr": 0.894,
-      "fpr": 0.144,
-      "score": 0.75
+      "tp": 246,
+      "fp": 31,
+      "fn": 0,
+      "tn": 178,
+      "tpr": 1,
+      "fpr": 0.148,
+      "score": 0.852
     }
   },
   "failures": [],

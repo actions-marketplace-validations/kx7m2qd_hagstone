@@ -9,7 +9,7 @@ names and versions to npm and PyPI and nothing else, and `--offline` turns those
 - **Code:** taint-aware [Opengrep](https://github.com/opengrep/opengrep) rules for JavaScript/TypeScript,
   Python and Java (servlets, Spring MVC, JAX-RS; JDBC, JdbcTemplate, JPA, Hibernate). Every rule ships
   with tests and maps to a CWE and an OWASP category. Java follows untrusted data through helper
-  methods in the same file, but not yet across files (a controller passing input to a repository).
+  methods and across files (a controller passing input to a repository in another class).
 - **Dependencies:** known vulnerabilities via [OSV-Scanner](https://github.com/google/osv-scanner),
   with a reachability check that lowers the severity of vulnerable packages nothing imports.
 - **Secrets:** [Gitleaks](https://github.com/gitleaks/gitleaks). Secret values are redacted from every

@@ -26,6 +26,14 @@ describe("pathScope", () => {
     }
   });
 
+  it("reads JVM package directories as package names, not layout", () => {
+    expect(pathScope("src/main/java/com/example/shop/OrderController.java")).toBe("prod");
+    expect(pathScope("app/src/main/kotlin/org/acme/test/Fixtures.kt")).toBe("prod");
+    expect(pathScope("src/test/java/com/example/shop/OrderControllerTest.java")).toBe("test");
+    expect(pathScope("src/test/java/com/example/shop/Helpers.java")).toBe("test");
+    expect(pathScope("examples/demo/src/main/java/com/acme/App.java")).toBe("example");
+  });
+
   it("puts examples apart", () => {
     expect(pathScope("examples/spring/App.java")).toBe("example");
   });

@@ -67,7 +67,7 @@ platforms are strongest). The product goal is global either way.
 | Capability | Status | Engine (license to verify before wrapping) |
 |---|---|---|
 | SAST: JavaScript/TypeScript, Python | ✅ 40 rules, taint-aware | Opengrep + our rules |
-| SAST: Java | 🟡 11 rules (OWASP Benchmark for Java categories), same-file taint; no cross-file yet | Opengrep + our rules |
+| SAST: Java | 🟡 11 rules (OWASP Benchmark for Java categories), same-file and cross-file taint | Opengrep + our rules + method summaries |
 | SAST: Go, C#, PHP, Kotlin, Ruby | ❌ | Opengrep + our rules |
 | SAST: C/C++ | ❌ (last: memory bugs need different analysis) | TBD |
 | Dependency vulnerabilities (SCA) + reachability | ✅ | OSV-Scanner |
@@ -202,14 +202,15 @@ network + Grype's DB). Each: pinned + verified, normalized into
 
 **Step 3 — SAST depth.** Java started 2026-11-20 (spec `docs/specs/java-sast.md`): 11 rules covering
 the OWASP Benchmark for Java's categories, average score 0.72 with a per-category gate; Spring app
-bench case. Measured gap: cross-file taint (controller → repository) — Opengrep has none, so it is next.
+bench case. Cross-file taint added 2026-11-25 (method summaries on top of Opengrep): average 0.77, 0
+injection misses. Next: rules for XXE, deserialization, SSRF, open redirect, SpEL, JWT, Spring Security.
 - Languages, in order: **Java** (Spring, eGovFrame; gate on the OWASP Benchmark for Java), **Go**,
   then C#, PHP, Kotlin, Ruby; **C/C++** last (memory bugs need a different kind of analysis).
   Each language gets real-CVE-fix benchmark cases like `bench:cves`.
 - Rule coverage target per language and main frameworks: every OWASP Top 10 and CWE Top 25 category,
   proven by the benchmark (not a rule count).
-- Cross-file taint: first check what Opengrep supports today; then use it, add our own cross-file
-  layer, or add a deeper engine for specific languages.
+- Cross-file taint: Java has our own summary layer (`java-xfile.ts`); reuse that design for the next
+  languages before reaching for a deeper engine.
 - Rule metadata gains local guideline mappings (e.g. the Korean secure-coding guideline item) alongside
   CWE and OWASP, starting with whichever market we focus on first.
 - AI-app rules, continuing: LLM output → SQL/shell/eval sinks, prompt-injection paths, unsafe model

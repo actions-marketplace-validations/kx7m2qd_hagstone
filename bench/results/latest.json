@@ -1,17 +1,17 @@
 {
   "pass": true,
   "precision": 1,
-  "recall": 0.975,
+  "recall": 0.987,
   "thresholds": {
     "precision": 0.95,
     "recall": 0.85
   },
   "totals": {
     "labels": 79,
-    "findings": 77,
-    "tp": 77,
+    "findings": 78,
+    "tp": 78,
     "fp": 0,
-    "fn": 2
+    "fn": 1
   },
   "rules": {
     "aws-0057": {
@@ -85,11 +85,11 @@
       "recall": 1
     },
     "java-sql-injection": {
-      "tp": 1,
+      "tp": 2,
       "fp": 0,
-      "fn": 1,
+      "fn": 0,
       "precision": 1,
-      "recall": 0.5
+      "recall": 1
     },
     "java-trust-boundary": {
       "tp": 1,
@@ -447,8 +447,7 @@
     "express-api/src/reports.js:7 js-sql-injection ← js-sql-formatted-query"
   ],
   "missed": [
-    "iac/terraform/main.tf:118 aws-0057",
-    "spring-app/src/main/java/com/example/shop/ProductRepository.java:19 java-sql-injection"
+    "iac/terraform/main.tf:118 aws-0057"
   ],
   "reachability": {
     "correct": 15,

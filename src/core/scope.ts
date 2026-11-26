@@ -14,9 +14,15 @@ const TEST_FILE =
 const JVM_TEST_FILE = /[a-z0-9](?:Test|Tests|TestCase|IT|ITCase)\.(?:java|kt)$|^Test[A-Z]\w*\.(?:java|kt)$/;
 const EXAMPLE_DIR = /^(?:examples?|samples?|demos?|playground)$/i;
 
+/** A JVM source root: the directories below it are a package name (`com/example/shop`), not a layout. */
+const JVM_SOURCE_ROOT = /^(?:java|kotlin|scala|groovy)$/;
+
 export function pathScope(relPath: string): PathScope {
-  const segments = relPath.replace(/\\/g, "/").replace(/^\.\//, "").split("/");
-  const file = segments.pop() ?? "";
+  const all = relPath.replace(/\\/g, "/").replace(/^\.\//, "").split("/");
+  const file = all.pop() ?? "";
+  // `src/main/java/com/example/...`: only the directories up to the source root say what this is.
+  const root = all.findIndex((s, i) => JVM_SOURCE_ROOT.test(s) && i > 0 && /^(?:main|test|it|integrationTest)$/.test(all[i - 1]!));
+  const segments = root >= 0 ? all.slice(0, root) : all;
   if (segments.some((s) => TEST_DIR.test(s)) || TEST_FILE.test(file) || JVM_TEST_FILE.test(file)) return "test";
   if (segments.some((s) => EXAMPLE_DIR.test(s))) return "example";
   return "prod";

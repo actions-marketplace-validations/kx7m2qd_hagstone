@@ -167,6 +167,7 @@ async function main(): Promise<number> {
   const { findings, warnings } = await runOpengrep(bin, join(dir, SUITE.scan), DEFAULT_IGNORES, {
     config: RULES_DIR,
     taintIntrafile: INTRAFILE,
+    javaCrossFile: LANG === "java" && !process.argv.includes("--no-xfile"),
   });
   const categories = scoreCategories(cases, findings, await coveredCwes(RULES_DIR), SUITE.ext);
 
